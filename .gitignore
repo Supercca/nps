@@ -8,6 +8,8 @@ nps
 
 # 打包产物（build.sh 生成的各平台发布包）
 *.tar.gz
+# build_*.bat 的暂存目录
+/build/
 
 # 运行期日志
 *.log
