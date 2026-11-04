@@ -1,6 +1,6 @@
 # NPS 内网穿透 — 代码库导览
 
-基于 `ehang-io/nps` 0.26.40 二次开发（github.com/yisier/nps）。Go 1.24，Web 面板用 Beego v1.12。
+基于 `ehang-io/nps` 0.26.41 二次开发（github.com/yisier/nps）。Go 1.24，Web 面板用 Beego v1.12。
 
 ## 分层结构
 
@@ -57,6 +57,20 @@ Web 后台「全局参数 → 安全设置 → 禁止国外 IP 访问」开关�
 - **注意**：`net.ParseIP` / `net.IPv4` 返回 16 字节表示，IPv4 字节在 12-15 位。
   自行取字节时必须先 `To4()`，否则会读到全零前缀。掩码计算也不能写成 `^uint32(0) << n`
   （常量溢出），必须先赋给变量再移位。
+
+## 流量统计与重置
+
+- 三层计数器：`client.Flow`（客户端总量）、`task.Flow`（隧道）、`host.Flow`（域名解析），
+  由 `lib/goroutine/pool.go:CopyBuffer` 在转发时同时累加到三层。
+- `lib/file/obj.go:Flow` 内嵌 `sync.RWMutex`，`Add()` / `Reset()` 用同一把写锁，避免与运行中的累加产生数据竞争。
+- **重置流量**：Web 面板客户端列表「重置流量」按钮 → `web/controllers/client.go:ResetFlow()`
+  → `client.Flow.Reset()`（清零 `ExportFlow`/`InletFlow`，保留 `FlowLimit`）→ 立即
+  `StoreClientsToJsonFile()` 落盘。该接口**仅管理员可用**：客户端配额是按 `client.Flow` 累计的
+  （`server/proxy/base.go:CheckFlowAndConnNum` 检查 `FlowLimit<<20 < ExportFlow+InletFlow`），
+  若允许普通客户端自行重置即可绕过流量上限。
+- 前端：`web/views/client/list.html` 的 option 列 + `web/static/js/language.js:submitform()`
+  的 `case 'resetflow'`（走 confirm 确认弹窗，成功后 reload）；文案在 `web/static/page/languages.xml`
+  的 `word-resetflow` / `confirm/resetflow` / `reply/*` 中维护。
 
 
 **连接类型**：`main`（信号/心跳）、`chan`（mux 数据隧道）、`conf`（配置下发）、`rgst`（IP 注册）、`sert`（secret 直连）、`file`（文件传输）、`p2pm`（P2P 打洞）。

@@ -257,6 +257,31 @@ func (s *ClientController) ChangeStatus() {
 	s.AjaxOk("modified success")
 }
 
+// ResetFlow 重置客户端的流量统计：把 clients.json 中的
+// ExportFlow（出口流量）与 InletFlow（入口流量）清零，流量上限 FlowLimit 不变。
+//
+// 仅管理员可用：客户端自身的流量配额是按 client.Flow 累计的，
+// 若允许普通客户端自行重置，就可以绕过流量上限限制。
+func (s *ClientController) ResetFlow() {
+	if isAdmin, ok := s.GetSession("isAdmin").(bool); !ok || !isAdmin {
+		s.AjaxErr("only admin can reset client flow")
+		return
+	}
+	id := s.GetIntNoErr("id")
+	client, err := file.GetDb().GetClient(id)
+	if err != nil {
+		s.AjaxErr("client ID not found")
+		return
+	}
+	if client.Flow == nil {
+		client.Flow = new(file.Flow)
+	}
+	client.Flow.Reset()
+	// 立即落盘，保证重启后仍为 0。
+	file.GetDb().JsonDb.StoreClientsToJsonFile()
+	s.AjaxOk("reset flow success")
+}
+
 // 删除客户端
 func (s *ClientController) Del() {
 	id := s.GetIntNoErr("id")

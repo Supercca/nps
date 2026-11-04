@@ -294,6 +294,10 @@
 		<zh-CN>流量限制</zh-CN>
 		<en-US>Flow limit</en-US>
 	</lang>
+	<lang id="word-resetflow">
+		<zh-CN>重置流量</zh-CN>
+		<en-US>Reset Flow</en-US>
+	</lang>
 	<lang id="word-go">
 		<zh-CN>进入</zh-CN>
 		<en-US>go</en-US>
@@ -871,6 +875,10 @@
 			<zh-CN>你确定要复制它吗？</zh-CN>
 			<en-US>Are you sure you want to copy it?</en-US>
 		</lang>
+		<lang id="resetflow">
+			<zh-CN>你确定要重置该客户端的流量统计吗？</zh-CN>
+			<en-US>Are you sure you want to reset the traffic statistics of this client?</en-US>
+		</lang>
 		<lang id="noselected">
 			<zh-CN>请先选择要删除的项目！</zh-CN>
 			<en-US>Please select items to delete!</en-US>
@@ -949,6 +957,18 @@
 		<lang id="webloginusernameduplicatepleasereset">
 			<zh-CN>Web登陆用户名重复，请重新设置</zh-CN>
 			<en-US>Web login username duplicate, please reset</en-US>
+		</lang>
+		<lang id="resetflowsuccess">
+			<zh-CN>流量重置成功</zh-CN>
+			<en-US>Reset flow success</en-US>
+		</lang>
+		<lang id="clientidnotfound">
+			<zh-CN>客户端 ID 不存在</zh-CN>
+			<en-US>Client ID not found</en-US>
+		</lang>
+		<lang id="onlyadmincanresetclientflow">
+			<zh-CN>只有管理员可以重置客户端流量</zh-CN>
+			<en-US>Only admin can reset client flow</en-US>
 		</lang>
 	</reply>
 

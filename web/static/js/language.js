@@ -193,6 +193,7 @@ function submitform(action, url, postdata) {
         case 'stop':
         case 'delete':
 		case 'copy':
+		case 'resetflow':
             var confirmObj = (languages && languages['content'] && languages['content']['confirm']) ? languages['content']['confirm'][action] : null;
             var confirmMsg = (confirmObj && (confirmObj[languages['current']] || confirmObj[languages['default']])) || ('Are you sure you want to ' + action + ' it?');
             if (! confirm(confirmMsg)) return;

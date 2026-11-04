@@ -24,6 +24,15 @@ func (s *Flow) Add(in, out int64) {
 	s.ExportFlow += int64(out)
 }
 
+// Reset 将入口/出口流量统计清零，流量上限 FlowLimit 保持不变。
+// 用于在 Web 后台手动重置某个客户端的流量计数。
+func (s *Flow) Reset() {
+	s.Lock()
+	defer s.Unlock()
+	s.InletFlow = 0
+	s.ExportFlow = 0
+}
+
 type Config struct {
 	U        string
 	P        string

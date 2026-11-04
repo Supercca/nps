@@ -1,4 +1,11 @@
 ﻿# 更新日志
+- 2026-11-04  v0.26.41
+  - 新增：
+    - 全局参数新增「禁止国外IP访问」开关：内置中国境内 IP 段库（6217 条 CIDR），开启后境外 IP 的 TCP / HTTP / SOCKS5 / UDP / WebSocket 反代连接将被拦截；内网地址与 IPv6 一律放行；开关位于「全局参数 → 安全设置」
+    - 客户端列表新增「重置流量」按钮：点击后可将所选客户端 `clients.json` 中的 `ExportFlow`（出口流量）与 `InletFlow`（入口流量）清零，`FlowLimit` 流量上限保持不变；该操作仅管理员可用
+  - 优化：
+    - `Flow.Reset()` 与 `Flow.Add()` 共用同一把锁，避免与运行中的流量累加产生数据竞争
+
 - 2026-11-02  v0.26.40
   - 新增：
     - 全局参数支持热更新：`nps.conf` 中的 `allow_ports`、`ip_limit`、`show_http_proxy_port`、`http_add_origin_header`、`allow_flow_limit`、`allow_rate_limit`、`allow_connection_num_limit`、`allow_tunnel_num_limit`、`allow_multi_ip`、`allow_local_proxy`、`allow_user_login`、`allow_user_register`、`allow_user_change_username`、`open_captcha`、`system_info_display` 迁移到 `conf/global.json`，新生成的 `nps.conf` 不再包含这些参数；升级时首次启动自动迁移，Web 后台保存后立即生效；「全局参数」页面同时按基础设置、安全设置、客户端能力、登录与账号、展示与高级分组重构

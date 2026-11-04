@@ -230,6 +230,8 @@
                     }
                     btn_group += '<a onclick="submitform(\'delete\', \'{{.web_base_url}}/client/del\', {\'id\':' + row.Id
                     btn_group += '})" class="btn btn-outline btn-danger"><i class="fa fa-trash"></i></a>'
+                    btn_group += '<a onclick="submitform(\'resetflow\', \'{{.web_base_url}}/client/resetflow\', {\'id\':' + row.Id
+                    btn_group += '})" class="btn btn-outline btn-info"><i class="fa fa-refresh"></i> <span langtag="word-resetflow"></span></a>'
                     {{end}}
 
                     btn_group += '<a href="{{.web_base_url}}/client/edit?id=' + row.Id
