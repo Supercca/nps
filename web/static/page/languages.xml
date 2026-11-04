@@ -1189,6 +1189,14 @@
 		<zh-CN>开启后，客户端必须完成 IP 授权后才能建立隧道</zh-CN>
 		<en-US>When enabled, clients must complete IP authorization before tunnels can be created</en-US>
 	</lang>
+	<lang id="word-blockforeignip">
+		<zh-CN>禁止国外 IP 访问</zh-CN>
+		<en-US>Block foreign IP access</en-US>
+	</lang>
+	<lang id="info-blockforeigniptips">
+		<zh-CN>开启后，仅允许中国大陆 IP 段访问隧道与域名；内网地址与 IPv6 不受影响</zh-CN>
+		<en-US>When enabled, only mainland China IP ranges can access tunnels and domains; private addresses and IPv6 are unaffected</en-US>
+	</lang>
 	<lang id="word-allowports">
 		<zh-CN>允许端口</zh-CN>
 		<en-US>Allowed ports</en-US>

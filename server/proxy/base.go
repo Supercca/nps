@@ -11,6 +11,7 @@ import (
 	"ehang.io/nps/lib/common"
 	"ehang.io/nps/lib/conn"
 	"ehang.io/nps/lib/file"
+	"ehang.io/nps/lib/geo"
 	"github.com/astaxie/beego/logs"
 )
 
@@ -113,6 +114,12 @@ func (s *BaseServer) DealClient(c *conn.Conn, client *file.Client, addr string,
 		return nil
 	}
 
+	// 判断是否开启了「禁止国外 IP 访问」
+	if IsForeignIp(c.RemoteAddr().String()) {
+		c.Close()
+		return nil
+	}
+
 	// 判断访问地址是否在黑名单内
 	if common.IsBlackIp(c.RemoteAddr().String(), client.VerifyKey, client.BlackIpList) {
 		c.Close()
@@ -150,5 +157,23 @@ func IsGlobalBlackIp(ipPort string) bool {
 		}
 	}
 
+	return false
+}
+
+// IsForeignIp 判断访问来源是否为境外 IP。
+// 仅在全局参数「禁止国外 IP 访问」开启时生效：命中中国大陆 IP 段库之外的公网地址
+// 视为境外并拒绝；私有/保留地址与 IPv6 一律放行。
+func IsForeignIp(ipPort string) bool {
+	if !file.GetDb().GetGlobalSettings().BlockForeignIp {
+		return false
+	}
+	ip := common.GetIpByAddr(ipPort)
+	if ip == "" {
+		return false
+	}
+	if geo.IsForeignIPStr(ip) {
+		logs.Warn("IP地址[" + ip + "]属于境外地址，已按「禁止国外IP访问」策略拦截")
+		return true
+	}
 	return false
 }

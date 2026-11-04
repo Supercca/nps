@@ -394,5 +394,6 @@ POST /global/save/
 | --- | --- |
 | globalBlackIpList | 全局黑名单 IP 列表，`\r\n` 分隔 |
 | serverUrl | 服务端访问地址（用于更正显示 IP） |
+| blockForeignIp | `1` 开启「禁止国外 IP 访问」；不传或 `0` 表示关闭 |
 
 ---

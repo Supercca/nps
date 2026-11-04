@@ -46,6 +46,13 @@ func (rp *HttpReverseProxy) ServeHTTP(rw http.ResponseWriter, req *http.Request)
 		rw.Write([]byte(req.Host + " not found"))
 		return
 	}
+	// 判断是否开启了「禁止国外 IP 访问」
+	// WebSocket 走独立代理链路，不经过 DealClient，需要单独判定。
+	if IsForeignIp(req.RemoteAddr) {
+		rw.WriteHeader(http.StatusForbidden)
+		rw.Write([]byte("403 Forbidden"))
+		return
+	}
 	if host.Client.Cnf.U != "" && host.Client.Cnf.P != "" && !common.CheckAuth(req, host.Client.Cnf.U, host.Client.Cnf.P) {
 		rw.WriteHeader(http.StatusUnauthorized)
 		rw.Write([]byte("Unauthorized"))

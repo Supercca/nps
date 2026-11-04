@@ -22,6 +22,8 @@ type GlobalSettings struct {
 	OpenCaptcha             bool
 	SystemInfoDisplay       bool
 	HttpAddOriginHeader     bool
+	// BlockForeignIp 为 true 时拒绝境外 IP 访问（通过内置中国大陆 CIDR 段库判定）。
+	BlockForeignIp bool
 }
 
 func boolPtrValue(v *bool) bool {
@@ -72,6 +74,7 @@ func (s *DbUtils) GetGlobalSettings() GlobalSettings {
 	settings.OpenCaptcha = boolPtrValue(global.OpenCaptcha)
 	settings.SystemInfoDisplay = boolPtrValue(global.SystemInfoDisplay)
 	settings.HttpAddOriginHeader = boolPtrValue(global.HttpAddOriginHeader)
+	settings.BlockForeignIp = boolPtrValue(global.BlockForeignIp)
 	return settings
 }
 
@@ -161,6 +164,10 @@ func (s *DbUtils) MigrateGlobalFromAppConfig() {
 	}
 	if global.HttpAddOriginHeader == nil {
 		global.HttpAddOriginHeader = boolPtr(appConfigBool("http_add_origin_header", true))
+		changed = true
+	}
+	if global.BlockForeignIp == nil {
+		global.BlockForeignIp = boolPtr(appConfigBool("block_foreign_ip", false))
 		changed = true
 	}
 

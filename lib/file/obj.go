@@ -256,6 +256,8 @@ type Glob struct {
 	OpenCaptcha             *bool   `json:"OpenCaptcha,omitempty"`
 	SystemInfoDisplay       *bool   `json:"SystemInfoDisplay,omitempty"`
 	HttpAddOriginHeader     *bool   `json:"HttpAddOriginHeader,omitempty"`
+	// BlockForeignIp 为 true 时，服务端拒绝来自中国大陆 IP 段以外的访问。
+	BlockForeignIp *bool `json:"BlockForeignIp,omitempty"`
 
 	sync.RWMutex
 }

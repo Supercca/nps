@@ -177,6 +177,12 @@ reset:
 		return
 	}
 
+	// 判断是否开启了「禁止国外 IP 访问」
+	if IsForeignIp(c.RemoteAddr().String()) {
+		c.Close()
+		return
+	}
+
 	if host, err = file.GetDb().GetInfoByHost(r.Host, r); err != nil {
 		logs.Notice("the url %s %s %s can't be parsed!, host %s, url %s, remote address %s", r.URL.Scheme, r.Host, r.RequestURI, r.Host, r.URL.Path, remoteAddr)
 		c.Close()

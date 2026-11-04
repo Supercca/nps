@@ -40,6 +40,7 @@ func (s *GlobalController) Index() {
 	s.Data["openCaptcha"] = settings.OpenCaptcha
 	s.Data["systemInfoDisplay"] = settings.SystemInfoDisplay
 	s.Data["httpAddOriginHeader"] = settings.HttpAddOriginHeader
+	s.Data["blockForeignIp"] = settings.BlockForeignIp
 
 	s.display("global/index")
 }
@@ -74,6 +75,7 @@ func (s *GlobalController) Save() {
 	global.OpenCaptcha = globalBoolPtr(s.GetBoolNoErr("openCaptcha"))
 	global.SystemInfoDisplay = globalBoolPtr(s.GetBoolNoErr("systemInfoDisplay"))
 	global.HttpAddOriginHeader = globalBoolPtr(s.GetBoolNoErr("httpAddOriginHeader"))
+	global.BlockForeignIp = globalBoolPtr(s.GetBoolNoErr("blockForeignIp"))
 
 	if err := file.GetDb().SaveGlobal(global); err != nil {
 		s.AjaxErr(err.Error())

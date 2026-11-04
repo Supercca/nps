@@ -85,6 +85,10 @@ func (s *UdpModeServer) Start() error {
 			common.BufPoolUdp.Put(buf)
 			continue
 		}
+		if IsForeignIp(addr.String()) {
+			common.BufPoolUdp.Put(buf)
+			continue
+		}
 		if common.IsBlackIp(addr.String(), s.task.Client.VerifyKey, s.task.Client.BlackIpList) {
 			common.BufPoolUdp.Put(buf)
 			continue

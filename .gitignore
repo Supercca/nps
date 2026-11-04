@@ -6,10 +6,16 @@ nps
 /nps.exe
 /npc.exe
 
+# 打包产物（build.sh 生成的各平台发布包）
+*.tar.gz
+
+# 运行期日志
+*.log
+
 # Node.js / VuePress
 node_modules/
 yarn.lock
-pnpm-lock.yaml
+pnpm.lock.yaml
 
 # VuePress build artifacts
 docs/.vuepress/.cache/
