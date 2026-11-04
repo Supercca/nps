@@ -5,16 +5,9 @@
 ![Go](https://img.shields.io/badge/Go-%3E%3D1.22-00ADD8?logo=go)
 
 > 一款轻量级、高性能、功能强大的内网穿透代理服务器，基于 [ehang-io/nps](https://github.com/ehang-io/nps) 0.26.10 二次开发 —— 修复大量 bug，持续更新中。  
-> 💬 聊天灌水 QQ 群：**619833483**（热心群主可提供免费远程协助）
 
 ### 📖 在线文档
 <small>[完整文档](https://yisier.github.io/nps) · [更新日志](https://yisier.github.io/nps/changelog/) · [程序安装](https://yisier.github.io/nps/install/#%E7%A8%8B%E5%BA%8F%E5%AE%89%E8%A3%85) · [宝塔面板](https://yisier.github.io/nps/install/#%E5%AE%9D%E5%A1%94%E9%9D%A2%E6%9D%BF-%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2) · [Docker安装](https://yisier.github.io/nps/install/#docker-%E5%AE%89%E8%A3%85)</small>
-
----
-## 💰 赞助 / 推荐
-#### 【腾讯云】— [WorkBuddy 全场景 AI 办公工作台](https://curl.qcloud.com/Fw85I52h)
-
-####  【NATNPS 云穿透】 — [无需自备服务器，注册即用，免费 3M 带宽 / 2 条隧道](https://natnps.com/register?utm_from=MQ==)
 
 
 ---
