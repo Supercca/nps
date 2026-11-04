@@ -52,21 +52,6 @@ npc -server=ip:8025 -vkey=xxx -tls_enable=true           # TLS 桥接
 npc -server=ip:8024 -vkey=vkey1,vkey2                    # 多隧道
 ```
 
-
----
-
-## ☕ 请作者喝杯咖啡
-> 如果这个项目帮到了你，可以请作者喝杯咖啡 ☕ 感谢支持！
-
-![微信/支付宝扫码赞赏](docs/.vuepress/public/image/payme.png)
-
-
----
-
-## 📈 Star History
-
-[![Star History Chart](https://star-history.dera.page/svg?repos=yisier/nps&type=Date)](https://star-history.dera.page/#yisier/nps&Date)
-
 ---
 
 ## 📃 License
