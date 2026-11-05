@@ -12,6 +12,7 @@ import (
 	"ehang.io/nps/lib/conn"
 	"ehang.io/nps/lib/file"
 	"ehang.io/nps/lib/geo"
+	"ehang.io/nps/lib/notify"
 	"github.com/astaxie/beego/logs"
 )
 
@@ -179,6 +180,7 @@ func IsForeignIp(ipPort string) bool {
 		if settings.AutoBlockForeignIp {
 			if file.GetDb().AddGlobalBlackIp(ip) {
 				logs.Warn("IP地址[" + ip + "]已自动加入全局黑名单")
+				notify.NotifyBlackIpAdded(ip, "境外 IP 自动拦截")
 			}
 		}
 		return true

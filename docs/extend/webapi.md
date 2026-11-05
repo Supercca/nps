@@ -396,5 +396,10 @@ POST /global/save/
 | serverUrl | 服务端访问地址（用于更正显示 IP） |
 | blockForeignIp | `1` 开启「禁止国外 IP 访问」；不传或 `0` 表示关闭 |
 | autoBlockForeignIp | `1` 开启「境外 IP 自动加入黑名单」；不传或 `0` 表示关闭。仅在 `blockForeignIp` 开启时生效：被判定为境外的 IP 会自动追加到全局黑名单并立即落盘 |
+| barkEnabled | `1` 开启 Bark 通知；不传或 `0` 表示关闭。开启后每次有 IP 加入全局黑名单都会推送一条通知 |
+| barkUrl | Bark 推送地址，形如 `https://api.day.app/<deviceKey>`；自建服务器填写自己的地址前缀 |
+| barkQuietStart | 免打扰时段开始时间，格式 `HH:MM`；为空表示不启用 |
+| barkQuietEnd | 免打扰时段结束时间，格式 `HH:MM`；与开始时间都填写且当前时间落在区间内时，通知会被直接丢弃、不再推送 |
+| hiddenMenus | 需要隐藏的左侧菜单项，可重复传；可选值 `index`/`client`/`host`/`tcp`/`udp`/`http`/`socks5`/`secret`/`p2p`/`file`/`global`/`help`。`global` 不可隐藏 |
 
 ---

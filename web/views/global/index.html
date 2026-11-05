@@ -257,6 +257,52 @@
                         </div>
                     </div>
                 </div>
+
+                <div class="setting-card">
+                    <div class="setting-card-head">
+                        <i class="fa fa-bell"></i><span langtag="word-barknotify"></span>
+                    </div>
+                    <div class="setting-card-body">
+                        <div class="setting-row">
+                            <div class="setting-main">
+                                <div class="setting-title" langtag="word-barknotify"></div>
+                                <div class="setting-desc" langtag="info-barknotifytips"></div>
+                            </div>
+                            <div class="setting-control">
+                                <div class="onoffswitch">
+                                    <input type="checkbox" name="barkEnabled" value="1" class="onoffswitch-checkbox"
+                                           id="barkEnabled" {{if .barkEnabled}}checked{{end}}>
+                                    <label class="onoffswitch-label" for="barkEnabled">
+                                        <span class="onoffswitch-inner"></span>
+                                        <span class="onoffswitch-switch"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="setting-field" id="bark_url">
+                            <label langtag="word-barkurl"></label>
+                            <input class="form-control" value="{{.barkUrl}}" type="text" name="barkUrl"
+                                   placeholder="https://api.day.app/your-key">
+                            <span class="help-block m-b-none" langtag="info-barkurltips"></span>
+                        </div>
+
+                        <div class="setting-field" id="bark_quiet_time">
+                            <label langtag="word-barkquiettime"></label>
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <input class="form-control" value="{{.barkQuietStart}}" type="text"
+                                           name="barkQuietStart" placeholder="23:00">
+                                </div>
+                                <div class="col-sm-6">
+                                    <input class="form-control" value="{{.barkQuietEnd}}" type="text"
+                                           name="barkQuietEnd" placeholder="07:00">
+                                </div>
+                            </div>
+                            <span class="help-block m-b-none" langtag="info-barkquiettips"></span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="col-lg-6">
@@ -485,6 +531,24 @@
                                     </label>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="setting-field" id="hidden_menus">
+                            <label langtag="word-hiddenmenus"></label>
+                            <div class="row">
+                                {{range .menuOptions}}
+                                <div class="col-sm-4">
+                                    <div class="checkbox">
+                                        <label>
+                                            <input type="checkbox" name="hiddenMenus" value="{{.Key}}"
+                                                   {{if .Checked}}checked{{end}} {{if eq .Key "global"}}disabled{{end}}>
+                                            <span langtag="{{.Name}}"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                {{end}}
+                            </div>
+                            <span class="help-block m-b-none" langtag="info-hiddenmenustips"></span>
                         </div>
                     </div>
                 </div>

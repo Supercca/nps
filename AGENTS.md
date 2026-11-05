@@ -76,6 +76,35 @@ Web 后台「全局参数 → 安全设置 → 境外 IP 自动加入黑名单�
   客户端级黑名单 `client.BlackIpList` 仍由 `common.IsBlackIp` 直接排序共享切片，
   是遗留问题，不在自动拉黑的影响范围内。
 
+## Bark 通知与菜单定制
+
+### Bark 通知（`lib/notify`）
+
+全局参数新增「Bark 通知」卡片（`global.json` 的 `BarkEnabled` / `BarkUrl` /
+`BarkQuietStart` / `BarkQuietEnd`）。
+
+- **触发点**：IP 被加入全局黑名单时推送通知。
+  - 自动拉黑：`server/proxy/base.go:IsForeignIp` → `AddGlobalBlackIp` 返回 true → `notify.NotifyBlackIpAdded(ip, "境外 IP 自动拦截")`
+  - 手动添加：Web 后台保存全局参数时对比新旧黑名单 → `notify.NotifyBlackIpBatchAdded(added, "Web 后台手动添加")`
+- **推送方式**：POST JSON 到 Bark 地址（`https://api.day.app/<key>`，自建服务器同格式）。
+  发送在独立 goroutine 中异步执行，**失败只记日志、绝不 panic**，不阻塞转发主链路。
+- **免打扰时段**：`BarkQuietStart`/`BarkQuietEnd` 格式 `HH:MM`，两者都填写才生效；
+  跨零点（`23:00` 至 `07:00`）已处理。时段内的通知**直接丢弃**，不排队、不补发。
+- **注意**：`lib/notify` 依赖 `lib/file`（读全局配置），因此 `lib/file` 不能反向依赖 `lib/notify`；
+  通知由调用方（`server/proxy`、`web/controllers`）显式触发，而不是在 `lib/file` 内部隐式发送。
+
+### 左侧菜单定制
+
+全局参数「展示与高级 → 隐藏左侧菜单」，配置 `global.json` 的 `HiddenMenus`
+（菜单 key 列表，见 `web/controllers/menu.go:MenuOptions`）。
+
+- 渲染：`web/controllers/base.go:Prepare` 把隐藏列表转成 `map[string]bool` 注入模板，
+  `web/views/public/layout.html` 用 `{{if not .hiddenMenus.<key>}}` 包裹每个菜单项。
+- **只隐藏入口**：对应页面仍可通过网址直接访问。
+- `global`（全局参数）**不可隐藏**（`ProtectedMenus`）—— 它是唯一能改回本配置的地方，
+  隐藏后会造成死锁。UI 上该项为 disabled 状态，后端 `filterHiddenMenus` 也会剔除。
+- 菜单 key：`index`/`client`/`host`/`tcp`/`udp`/`http`/`socks5`/`secret`/`p2p`/`file`/`global`/`help`
+
 ## 流量统计与重置
 
 - 三层计数器：`client.Flow`（客户端总量）、`task.Flow`（隧道）、`host.Flow`（域名解析），

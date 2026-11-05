@@ -1225,6 +1225,38 @@
 		<zh-CN>开启「禁止国外 IP 访问」后，被判定为境外的 IP 会自动追加到全局黑名单并立即生效；需同时开启「禁止国外 IP 访问」</zh-CN>
 		<en-US>When "Block foreign IP access" is enabled, detected foreign IPs are automatically appended to the global blacklist and take effect immediately; requires "Block foreign IP access" to be on</en-US>
 	</lang>
+	<lang id="word-barknotify">
+		<zh-CN>Bark 通知</zh-CN>
+		<en-US>Bark notification</en-US>
+	</lang>
+	<lang id="info-barknotifytips">
+		<zh-CN>开启后，每次有 IP 被加入全局黑名单时都会推送一条 Bark 通知</zh-CN>
+		<en-US>When enabled, a Bark notification is pushed every time an IP is added to the global blacklist</en-US>
+	</lang>
+	<lang id="word-barkurl">
+		<zh-CN>推送地址</zh-CN>
+		<en-US>Push URL</en-US>
+	</lang>
+	<lang id="info-barkurltips">
+		<zh-CN>填写 Bark 推送地址，形如 https://api.day.app/你的设备Key；使用自建服务器时填写自己的地址前缀</zh-CN>
+		<en-US>Bark push URL, e.g. https://api.day.app/your-key; use your own prefix when running a self-hosted server</en-US>
+	</lang>
+	<lang id="word-barkquiettime">
+		<zh-CN>免打扰时段</zh-CN>
+		<en-US>Quiet period</en-US>
+	</lang>
+	<lang id="info-barkquiettips">
+		<zh-CN>填写起止时间（HH:MM），该时段内的通知会被直接丢弃、不再推送；跨零点可填 23:00 至 07:00；留空表示不启用</zh-CN>
+		<en-US>Start and end time (HH:MM); notifications in this period are dropped instead of being pushed; cross-midnight can be 23:00 to 07:00; leave empty to disable</en-US>
+	</lang>
+	<lang id="word-hiddenmenus">
+		<zh-CN>隐藏左侧菜单</zh-CN>
+		<en-US>Hidden sidebar menus</en-US>
+	</lang>
+	<lang id="info-hiddenmenustips">
+		<zh-CN>勾选后对应的菜单项不再显示在左侧导航；仅隐藏入口，对应页面仍可通过网址访问；「全局参数」不可隐藏</zh-CN>
+		<en-US>Checked items are removed from the left navigation; only the entry is hidden and the page is still reachable by URL; "Global Settings" cannot be hidden</en-US>
+	</lang>
 	<lang id="word-allowports">
 		<zh-CN>允许端口</zh-CN>
 		<en-US>Allowed ports</en-US>

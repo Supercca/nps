@@ -590,7 +590,7 @@ func initGlobalConfig(confDir string) {
 	logs.Info("Auto-generated default global config file:", globalPath)
 }
 
-const defaultGlobalJson = `{"BlackIpList":[],"ServerUrl":"","AllowPorts":"","IpLimit":false,"ShowHttpProxyPort":true,"AllowFlowLimit":true,"AllowRateLimit":true,"AllowConnectionNumLimit":true,"AllowTunnelNumLimit":true,"AllowMultiIp":true,"AllowLocalProxy":false,"AllowUserLogin":true,"AllowUserRegister":false,"AllowUserChangeUsername":true,"OpenCaptcha":false,"SystemInfoDisplay":true,"HttpAddOriginHeader":true,"BlockForeignIp":false,"AutoBlockForeignIp":false}`
+const defaultGlobalJson = `{"BlackIpList":[],"ServerUrl":"","AllowPorts":"","IpLimit":false,"ShowHttpProxyPort":true,"AllowFlowLimit":true,"AllowRateLimit":true,"AllowConnectionNumLimit":true,"AllowTunnelNumLimit":true,"AllowMultiIp":true,"AllowLocalProxy":false,"AllowUserLogin":true,"AllowUserRegister":false,"AllowUserChangeUsername":true,"OpenCaptcha":false,"SystemInfoDisplay":true,"HttpAddOriginHeader":true,"BlockForeignIp":false,"AutoBlockForeignIp":false,"BarkEnabled":false,"BarkUrl":"","BarkQuietStart":"","BarkQuietEnd":"","HiddenMenus":[]}`
 
 const defaultNpsConf = `http_proxy_ip=0.0.0.0
 http_proxy_port=80

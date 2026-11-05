@@ -270,6 +270,18 @@ type Glob struct {
 	// AutoBlockForeignIp 为 true 时，把被判定为境外的 IP 自动追加到全局黑名单。
 	// 仅在 BlockForeignIp 开启时生效。
 	AutoBlockForeignIp *bool `json:"AutoBlockForeignIp,omitempty"`
+	// BarkEnabled 为 true 时，把 IP 加入全局黑名单的事件通过 Bark 推送。
+	BarkEnabled *bool `json:"BarkEnabled,omitempty"`
+	// BarkUrl 是 Bark 推送地址，形如 https://api.day.app/<deviceKey>，
+	// 自建 Bark 服务器填写自己的前缀即可。
+	BarkUrl *string `json:"BarkUrl,omitempty"`
+	// BarkQuietStart / BarkQuietEnd 是免打扰时段，格式 HH:MM。
+	// 两者都填写且当前时间落在该区间内时，通知会被直接丢弃。
+	BarkQuietStart *string `json:"BarkQuietStart,omitempty"`
+	BarkQuietEnd   *string `json:"BarkQuietEnd,omitempty"`
+	// HiddenMenus 是左侧导航需要隐藏的菜单项 key 列表。
+	// 可选值：index/client/host/tcp/udp/http/socks5/secret/p2p/file/global/help。
+	HiddenMenus []string `json:"HiddenMenus,omitempty"`
 
 	sync.RWMutex
 }

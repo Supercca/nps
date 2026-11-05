@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"ehang.io/nps/lib/file"
+	"ehang.io/nps/lib/notify"
 )
 
 type GlobalController struct {
@@ -42,6 +43,11 @@ func (s *GlobalController) Index() {
 	s.Data["httpAddOriginHeader"] = settings.HttpAddOriginHeader
 	s.Data["blockForeignIp"] = settings.BlockForeignIp
 	s.Data["autoBlockForeignIp"] = settings.AutoBlockForeignIp
+	s.Data["barkEnabled"] = settings.BarkEnabled
+	s.Data["barkUrl"] = settings.BarkUrl
+	s.Data["barkQuietStart"] = settings.BarkQuietStart
+	s.Data["barkQuietEnd"] = settings.BarkQuietEnd
+	s.Data["menuOptions"] = menuOptionsWithState(settings.HiddenMenus)
 
 	s.display("global/index")
 }
@@ -59,7 +65,10 @@ func (s *GlobalController) Save() {
 	if global == nil {
 		global = new(file.Glob)
 	}
-	file.GetDb().SetGlobalBlackIpList(global, RemoveRepeatedElement(strings.Split(s.getEscapeString("globalBlackIpList"), "\r\n")))
+	// 保存前先记下旧黑名单，用于事后判断哪些 IP 是这次新增的。
+	oldBlackIpList := file.GetDb().GetGlobalBlackIpList()
+	newBlackIpList := RemoveRepeatedElement(strings.Split(s.getEscapeString("globalBlackIpList"), "\r\n"))
+	file.GetDb().SetGlobalBlackIpList(global, newBlackIpList)
 	global.ServerUrl = s.getEscapeString("serverUrl")
 	global.AllowPorts = globalStringPtr(strings.TrimSpace(s.getEscapeString("allowPorts")))
 	global.IpLimit = globalBoolPtr(s.GetBoolNoErr("ipLimit"))
@@ -78,12 +87,67 @@ func (s *GlobalController) Save() {
 	global.HttpAddOriginHeader = globalBoolPtr(s.GetBoolNoErr("httpAddOriginHeader"))
 	global.BlockForeignIp = globalBoolPtr(s.GetBoolNoErr("blockForeignIp"))
 	global.AutoBlockForeignIp = globalBoolPtr(s.GetBoolNoErr("autoBlockForeignIp"))
+	global.BarkEnabled = globalBoolPtr(s.GetBoolNoErr("barkEnabled"))
+	global.BarkUrl = globalStringPtr(strings.TrimSpace(s.getEscapeString("barkUrl")))
+	global.BarkQuietStart = globalStringPtr(strings.TrimSpace(s.getEscapeString("barkQuietStart")))
+	global.BarkQuietEnd = globalStringPtr(strings.TrimSpace(s.getEscapeString("barkQuietEnd")))
+	global.HiddenMenus = filterHiddenMenus(s.hiddenMenusParam())
 
 	if err := file.GetDb().SaveGlobal(global); err != nil {
 		s.AjaxErr(err.Error())
 		return
 	}
+	// 通知本次新增到全局黑名单的 IP。
+	if added := diffBlackIpList(oldBlackIpList, newBlackIpList); len(added) > 0 {
+		notify.NotifyBlackIpBatchAdded(added, "Web 后台手动添加")
+	}
 	s.AjaxOk("save success")
+}
+
+// hiddenMenusParam 读取被隐藏的菜单列表。
+// 浏览器的表单由 jQuery serializeArray 提交，同名参数会被编码成 name[]，
+// 而普通 API 调用可能直接传 name，两种写法都要兼容。
+func (s *GlobalController) hiddenMenusParam() []string {
+	keys := s.GetStrings("hiddenMenus")
+	keys = append(keys, s.GetStrings("hiddenMenus[]")...)
+	return keys
+}
+
+// diffBlackIpList 返回在 new 中但不在 old 中的 IP。
+func diffBlackIpList(old, new []string) []string {
+	exist := make(map[string]bool, len(old))
+	for _, item := range old {
+		exist[item] = true
+	}
+	var added []string
+	for _, item := range new {
+		item = strings.TrimSpace(item)
+		if item == "" || exist[item] {
+			continue
+		}
+		exist[item] = true
+		added = append(added, item)
+	}
+	return added
+}
+
+// filterHiddenMenus 只保留已知菜单 key，避免写入任意值。
+func filterHiddenMenus(keys []string) []string {
+	var result []string
+	for _, key := range keys {
+		key = strings.TrimSpace(key)
+		if key == "" {
+			continue
+		}
+		if _, ok := MenuKeys[key]; !ok {
+			continue
+		}
+		if ProtectedMenus[key] {
+			continue
+		}
+		result = append(result, key)
+	}
+	return result
 }
 
 func globalBoolPtr(value bool) *bool {

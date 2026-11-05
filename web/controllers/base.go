@@ -66,6 +66,8 @@ func (s *BaseController) Prepare() {
 	s.Data["allow_tunnel_num_limit"] = globalSettings.AllowTunnelNumLimit
 	s.Data["allow_local_proxy"] = globalSettings.AllowLocalProxy
 	s.Data["allow_user_change_username"] = globalSettings.AllowUserChangeUsername
+	// 左侧导航按全局配置隐藏部分菜单项。
+	s.Data["hiddenMenus"] = hiddenMenuMap(globalSettings.HiddenMenus)
 	httpPort := beego.AppConfig.String("http_proxy_port")
 	if httpPort != "80" && globalSettings.ShowHttpProxyPort {
 		s.Data["http_proxy_port"] = ":" + httpPort

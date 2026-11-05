@@ -29,6 +29,15 @@ type GlobalSettings struct {
 	// AutoBlockForeignIp 为 true 时，把判定为境外的 IP 自动追加到全局黑名单。
 	// 仅在 BlockForeignIp 开启时生效。
 	AutoBlockForeignIp bool
+	// BarkEnabled 为 true 时，IP 加入全局黑名单的事件会通过 Bark 推送。
+	BarkEnabled bool
+	// BarkUrl 是 Bark 推送地址，形如 https://api.day.app/<deviceKey>。
+	BarkUrl string
+	// BarkQuietStart / BarkQuietEnd 是免打扰时段，格式 HH:MM，均为空表示不启用。
+	BarkQuietStart string
+	BarkQuietEnd   string
+	// HiddenMenus 是左侧导航需要隐藏的菜单项 key 列表。
+	HiddenMenus []string
 }
 
 // MaxGlobalBlackIpCount 是全局黑名单的最大条目数。
@@ -149,6 +158,13 @@ func (s *DbUtils) GetGlobalSettings() GlobalSettings {
 	settings.HttpAddOriginHeader = boolPtrValue(global.HttpAddOriginHeader)
 	settings.BlockForeignIp = boolPtrValue(global.BlockForeignIp)
 	settings.AutoBlockForeignIp = boolPtrValue(global.AutoBlockForeignIp)
+	settings.BarkEnabled = boolPtrValue(global.BarkEnabled)
+	settings.BarkUrl = stringPtrValue(global.BarkUrl)
+	settings.BarkQuietStart = stringPtrValue(global.BarkQuietStart)
+	settings.BarkQuietEnd = stringPtrValue(global.BarkQuietEnd)
+	if len(global.HiddenMenus) > 0 {
+		settings.HiddenMenus = append([]string(nil), global.HiddenMenus...)
+	}
 	return settings
 }
 
@@ -246,6 +262,22 @@ func (s *DbUtils) MigrateGlobalFromAppConfig() {
 	}
 	if global.AutoBlockForeignIp == nil {
 		global.AutoBlockForeignIp = boolPtr(appConfigBool("auto_block_foreign_ip", false))
+		changed = true
+	}
+	if global.BarkEnabled == nil {
+		global.BarkEnabled = boolPtr(appConfigBool("bark_enabled", false))
+		changed = true
+	}
+	if global.BarkUrl == nil {
+		global.BarkUrl = stringPtr(beego.AppConfig.String("bark_url"))
+		changed = true
+	}
+	if global.BarkQuietStart == nil {
+		global.BarkQuietStart = stringPtr(beego.AppConfig.String("bark_quiet_start"))
+		changed = true
+	}
+	if global.BarkQuietEnd == nil {
+		global.BarkQuietEnd = stringPtr(beego.AppConfig.String("bark_quiet_end"))
 		changed = true
 	}
 
