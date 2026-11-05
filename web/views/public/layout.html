@@ -125,6 +125,13 @@
                 </li>
                 {{end}}
 
+                {{if not .hiddenMenus.log}}
+                <li class="{{if eq "log" .menu}}active{{end}}">
+                    <a href="{{.web_base_url}}/log/index"><i class="fa fa-file-text-o fa-lg"></i>
+                    <span class="nav-label" langtag="word-serverlog"></span></a>
+                </li>
+                {{end}}
+
                 {{if not .hiddenMenus.help}}
                 <li class="{{if eq "help" .menu}}active{{end}}">
                     <a href="https://ehang.io/nps/documents" target="_blank"><i class="fa fa-lightbulb fa-lg"></i>

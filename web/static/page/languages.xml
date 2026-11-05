@@ -1257,6 +1257,66 @@
 		<zh-CN>勾选后对应的菜单项不再显示在左侧导航；仅隐藏入口，对应页面仍可通过网址访问；「全局参数」不可隐藏</zh-CN>
 		<en-US>Checked items are removed from the left navigation; only the entry is hidden and the page is still reachable by URL; "Global Settings" cannot be hidden</en-US>
 	</lang>
+	<lang id="word-serverlog">
+		<zh-CN>服务端日志</zh-CN>
+		<en-US>Server log</en-US>
+	</lang>
+	<lang id="word-refresh">
+		<zh-CN>刷新</zh-CN>
+		<en-US>Refresh</en-US>
+	</lang>
+	<lang id="word-logpause">
+		<zh-CN>暂停</zh-CN>
+		<en-US>Pause</en-US>
+	</lang>
+	<lang id="word-logrun">
+		<zh-CN>继续</zh-CN>
+		<en-US>Resume</en-US>
+	</lang>
+	<lang id="word-copy">
+		<zh-CN>复制</zh-CN>
+		<en-US>Copy</en-US>
+	</lang>
+	<lang id="word-download">
+		<zh-CN>下载</zh-CN>
+		<en-US>Download</en-US>
+	</lang>
+	<lang id="word-logclear">
+		<zh-CN>清理日志</zh-CN>
+		<en-US>Clear logs</en-US>
+	</lang>
+	<lang id="word-loglevelall">
+		<zh-CN>全部级别</zh-CN>
+		<en-US>All levels</en-US>
+	</lang>
+	<lang id="word-loglevelerror">
+		<zh-CN>错误</zh-CN>
+		<en-US>Error</en-US>
+	</lang>
+	<lang id="word-loglevelwarning">
+		<zh-CN>警告</zh-CN>
+		<en-US>Warning</en-US>
+	</lang>
+	<lang id="word-loglevelnotice">
+		<zh-CN>通知</zh-CN>
+		<en-US>Notice</en-US>
+	</lang>
+	<lang id="word-loglevelinfo">
+		<zh-CN>信息</zh-CN>
+		<en-US>Info</en-US>
+	</lang>
+	<lang id="word-logleveldebug">
+		<zh-CN>调试</zh-CN>
+		<en-US>Debug</en-US>
+	</lang>
+	<lang id="info-logkeywordtips">
+		<zh-CN>按关键词过滤</zh-CN>
+		<en-US>Filter by keyword</en-US>
+	</lang>
+	<lang id="info-logcleartips">
+		<zh-CN>确定要清理日志吗？将清空内存中的日志缓冲，并清空磁盘上的日志文件内容。</zh-CN>
+		<en-US>Clear the logs? This empties the in-memory log buffer and truncates the log files on disk.</en-US>
+	</lang>
 	<lang id="word-allowports">
 		<zh-CN>允许端口</zh-CN>
 		<en-US>Allowed ports</en-US>

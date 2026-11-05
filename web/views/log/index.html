@@ -1,0 +1,201 @@
+<div class="ibox float-e-margins">
+    <div class="ibox-title">
+        <h5 langtag="word-serverlog"></h5>
+        <div class="ibox-tools">
+            <div class="btn-group">
+                <button class="btn btn-xs btn-default" type="button" id="logRefresh">
+                    <i class="fa fa-refresh"></i> <span langtag="word-refresh"></span>
+                </button>
+                <button class="btn btn-xs btn-default" type="button" id="logToggle">
+                    <i class="fa fa-pause"></i> <span id="logToggleText" langtag="word-logpause"></span>
+                </button>
+                <button class="btn btn-xs btn-default" type="button" id="logCopy">
+                    <i class="fa fa-copy"></i> <span langtag="word-copy"></span>
+                </button>
+                <button class="btn btn-xs btn-default" type="button" id="logDownload">
+                    <i class="fa fa-download"></i> <span langtag="word-download"></span>
+                </button>
+                <button class="btn btn-xs btn-danger" type="button" id="logClear">
+                    <i class="fa fa-trash"></i> <span langtag="word-logclear"></span>
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="ibox-content">
+        <div class="row" style="margin-bottom: 10px;">
+            <div class="col-sm-4">
+                <input type="text" class="form-control" id="logKeyword"
+                       placeholder="" langtag="info-logkeywordtips">
+            </div>
+            <div class="col-sm-3">
+                <select class="form-control" id="logLevel">
+                    <option value="" langtag="word-loglevelall"></option>
+                    <option value="error" langtag="word-loglevelerror"></option>
+                    <option value="warning" langtag="word-loglevelwarning"></option>
+                    <option value="notice" langtag="word-loglevelnotice"></option>
+                    <option value="info" langtag="word-loglevelinfo"></option>
+                    <option value="debug" langtag="word-logleveldebug"></option>
+                </select>
+            </div>
+            <div class="col-sm-5" style="line-height: 34px;">
+                <span class="text-muted" id="logStat"></span>
+            </div>
+        </div>
+
+        <div id="logFileInfo" class="text-muted" style="margin-bottom: 8px;">{{.logFilePath}}</div>
+
+        <div id="logConsole"
+             style="background:#1b1f23;color:#c5c8c6;height:560px;overflow-y:auto;overflow-x:auto;
+                    font-family:Menlo,Consolas,monospace;font-size:12px;line-height:18px;padding:10px;
+                    border-radius:3px;white-space:pre-wrap;word-break:break-all;">
+        </div>
+
+        <span id="logClearConfirm" class="hide" langtag="info-logcleartips"></span>
+    </div>
+</div>
+
+<script>
+    var logOffset = 0;
+    var logLatest = 0;
+    var logPaused = false;
+    var logTimer = null;
+    var logAll = [];
+
+    function logEscape(text) {
+        return String(text == null ? '' : text)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function logLevelColor(level) {
+        switch (level) {
+            case 'emergency':
+            case 'alert':
+            case 'critical':
+            case 'error':
+                return '#f97583';
+            case 'warning':
+                return '#e2c08d';
+            case 'notice':
+                return '#7ee787';
+            case 'debug':
+                return '#8b949e';
+            default:
+                return '#c5c8c6';
+        }
+    }
+
+    function logRender() {
+        var keyword = ($('#logKeyword').val() || '').toLowerCase();
+        var level = $('#logLevel').val();
+        var html = '';
+        var shown = 0;
+        for (var i = 0; i < logAll.length; i++) {
+            var e = logAll[i];
+            if (level && e.level !== level) continue;
+            if (keyword && e.msg.toLowerCase().indexOf(keyword) < 0) continue;
+            shown++;
+            html += '<div><span style="color:#6e7681">' + logEscape(e.time) + '</span> '
+                + '<span style="color:#79c0ff">[' + logEscape(e.level) + ']</span> '
+                + '<span style="color:' + logLevelColor(e.level) + '">' + logEscape(e.msg) + '</span></div>';
+        }
+        if (html === '') {
+            html = '<div style="color:#8b949e">(no log)</div>';
+        }
+        var box = document.getElementById('logConsole');
+        var atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
+        box.innerHTML = html;
+        if (atBottom) {
+            box.scrollTop = box.scrollHeight;
+        }
+        $('#logStat').text(logAll.length + ' / ' + logLatest
+            + (keyword || level ? ' (filtered: ' + shown + ')' : ''));
+    }
+
+    function logText() {
+        return logAll.map(function (e) {
+            return e.time + ' [' + e.level + '] ' + e.msg;
+        }).join('\n');
+    }
+
+    function logFetch() {
+        if (logPaused) return;
+        $.ajax({
+            type: 'GET',
+            url: '{{.web_base_url}}/log/list',
+            data: { offset: logOffset, limit: 500 },
+            dataType: 'json',
+            success: function (res) {
+                if (!res || res.status !== 1) return;
+                if (res.entries && res.entries.length > 0) {
+                    for (var i = 0; i < res.entries.length; i++) {
+                        logAll.push(res.entries[i]);
+                    }
+                    // 页面侧也保留上限，避免长时间挂机后浏览器内存膨胀。
+                    if (logAll.length > 3000) {
+                        logAll = logAll.slice(logAll.length - 3000);
+                    }
+                    logOffset = res.entries[res.entries.length - 1].seq;
+                }
+                logLatest = res.latest;
+                logRender();
+            }
+        });
+    }
+
+    $(function () {
+        logFetch();
+        logTimer = setInterval(logFetch, 3000);
+
+        $('#logKeyword, #logLevel').on('input change', function () {
+            logRender();
+        });
+        $('#logRefresh').on('click', function () {
+            logFetch();
+        });
+        $('#logToggle').on('click', function () {
+            logPaused = !logPaused;
+            $('#logToggleText').attr('langtag', logPaused ? 'word-logrun' : 'word-logpause');
+            $('#logToggle').find('i').attr('class', logPaused ? 'fa fa-play' : 'fa fa-pause');
+            // 切换后的文案需要重新走一次 i18n 填充
+            $('body').setLang('');
+        });
+        $('#logCopy').on('click', function () {
+            var text = logText();
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text);
+            } else {
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand('copy');
+                document.body.removeChild(ta);
+            }
+        });
+        $('#logDownload').on('click', function () {
+            var blob = new Blob([logText()], { type: 'text/plain;charset=utf-8' });
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'nps-log-' + new Date().toISOString().replace(/[:.]/g, '-') + '.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+        $('#logClear').on('click', function () {
+            var tip = $('#logClearConfirm').text() || 'Clear the logs?';
+            if (!confirm(tip)) return;
+            $.ajax({
+                type: 'POST',
+                url: '{{.web_base_url}}/log/clear',
+                success: function (res) {
+                    if (res && res.status === 1) {
+                        logAll = [];
+                        logOffset = 0;
+                        logRender();
+                    }
+                }
+            });
+        });
+    });
+</script>

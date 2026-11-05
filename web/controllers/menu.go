@@ -22,6 +22,7 @@ var MenuOptions = []MenuOption{
 	{Key: "p2p", Name: "scheme-p2p"},
 	{Key: "file", Name: "scheme-file"},
 	{Key: "global", Name: "word-globalparam"},
+	{Key: "log", Name: "word-serverlog"},
 	{Key: "help", Name: "word-help"},
 }
 

@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -94,12 +95,9 @@ func main() {
 	logs.SetLogFuncCallDepth(3)
 
 	if logPath == "" {
-		logPath := beego.AppConfig.String("log_path")
+		logPath = beego.AppConfig.String("log_path")
 		if logPath == "" {
 			logPath = common.GetLogPath()
-		}
-		if common.IsWindows() {
-			logPath = strings.Replace(logPath, "\\", "\\\\", -1)
 		}
 	}
 
@@ -124,10 +122,15 @@ func main() {
 
 	svcConfig.Arguments = append(svcConfig.Arguments, "service")
 	if len(os.Args) > 1 && os.Args[1] == "service" {
-		_ = logs.SetLogger(logs.AdapterFile, `{"level":`+level+`,"filename":"`+logPath+`","daily":false,"maxlines":100000,"color":true}`)
+		_ = logs.SetLogger(logs.AdapterFile, fileLoggerConfig(level, logPath))
+		// 记录实际使用的日志文件路径，供 Web 端日志清理功能定位文件。
+		common.SetLogFilePath(logPath)
 	} else {
 		_ = logs.SetLogger(logs.AdapterConsole, `{"level":`+level+`,"color":true}`)
 	}
+	// beego 的 SetLogger 是追加语义：日志会同时写入所有已注册的 logger。
+	// 这里额外挂一个内存环形缓冲，供 Web 端日志页面读取。
+	_ = logs.SetLogger("store", `{"level":`+level+`}`)
 	if !common.IsWindows() {
 		svcConfig.Dependencies = []string{
 			"Requires=network.target",
@@ -216,6 +219,16 @@ func main() {
 	}
 
 	_ = s.Run()
+}
+
+// fileLoggerConfig 生成 beego 文件日志的 JSON 配置。
+//
+// 文件名必须用 strconv.Quote 转义：Windows 上的绝对路径含有反斜杠，
+// 直接拼进 JSON 会让反序列化失败，beego 初始化文件 logger 静默失败
+// （错误被上层丢弃），表现为日志文件根本不生成。
+func fileLoggerConfig(level, filename string) string {
+	return `{"level":` + level + `,"filename":` + strconv.Quote(filename) +
+		`,"daily":false,"maxlines":100000,"color":true}`
 }
 
 func printSlogan() {

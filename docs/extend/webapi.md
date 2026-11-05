@@ -400,6 +400,48 @@ POST /global/save/
 | barkUrl | Bark 推送地址，形如 `https://api.day.app/<deviceKey>`；自建服务器填写自己的地址前缀 |
 | barkQuietStart | 免打扰时段开始时间，格式 `HH:MM`；为空表示不启用 |
 | barkQuietEnd | 免打扰时段结束时间，格式 `HH:MM`；与开始时间都填写且当前时间落在区间内时，通知会被直接丢弃、不再推送 |
-| hiddenMenus | 需要隐藏的左侧菜单项，可重复传；可选值 `index`/`client`/`host`/`tcp`/`udp`/`http`/`socks5`/`secret`/`p2p`/`file`/`global`/`help`。`global` 不可隐藏 |
+| hiddenMenus | 需要隐藏的左侧菜单项，可重复传；可选值 `index`/`client`/`host`/`tcp`/`udp`/`http`/`socks5`/`secret`/`p2p`/`file`/`global`/`log`/`help`。`global` 不可隐藏 |
+
+---
+
+### 获取服务端日志（增量）
+
+```
+GET /log/list/?offset=0&limit=500
+```
+
+| 参数 | 含义 |
+| --- | --- |
+| offset | 已收到的最后一条日志的 `seq`，不传视为 0 |
+| limit | 本次最多返回条数，默认 500、上限 2000 |
+
+返回：
+
+```json
+{
+  "status": 1,
+  "entries": [
+    { "seq": 12, "time": "2026-11-05 14:48:50", "level": "info", "msg": "the version of server is ..." }
+  ],
+  "latest": 12,
+  "total": 12
+}
+```
+
+`seq` 单调递增，前端带上它即可只拉取新增部分。日志来自服务端的内存环形缓冲（默认保留最近 2000 条），
+进程重启后清空。**该接口仅管理员可用**：日志内容包含客户端 vkey。
+
+---
+
+### 清理服务端日志
+
+```
+POST /log/clear/
+```
+
+清空内存日志缓冲，并截断磁盘上的日志文件（含 beego 轮转出来的历史文件）。
+当前正在写入的日志文件只做截断而非删除，清理后日志可以继续正常写入。
+
+返回 `removed`（已处理的文件名列表）与 `failed`（处理失败的文件及原因）。**仅管理员可用**。
 
 ---
