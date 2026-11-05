@@ -6,53 +6,20 @@
 
 > 一款轻量级、高性能、功能强大的内网穿透代理服务器，基于 [ehang-io/nps](https://github.com/ehang-io/nps) 0.26.10 二次开发 —— 修复大量 bug，持续更新中。  
 
-### 📖 在线文档
-<small>[完整文档](https://yisier.github.io/nps) · [更新日志](https://yisier.github.io/nps/changelog/) · [程序安装](https://yisier.github.io/nps/install/#%E7%A8%8B%E5%BA%8F%E5%AE%89%E8%A3%85) · [宝塔面板](https://yisier.github.io/nps/install/#%E5%AE%9D%E5%A1%94%E9%9D%A2%E6%9D%BF-%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2) · [Docker安装](https://yisier.github.io/nps/install/#docker-%E5%AE%89%E8%A3%85)</small>
+新功能：
 
+重置流量
+![img](https://raw.githubusercontent.com/yisier/nps/master/docs/.vuepress/public/image/new/new1.jpg)
 
----
-## 🚀 快速开始
+新增「禁止国外IP访问」全局开关
+全局新增「境外 IP 自动加入黑名单」开关
+新增 Bark 通知与左侧菜单定制
+Web 端新增服务器重启按钮，优化调整左侧菜单，不跟随右侧内容滚动。
+![img](https://raw.githubusercontent.com/yisier/nps/master/docs/.vuepress/public/image/new/new2.jpg)
 
-### 下载
+Web 端新增服务端日志查看与清理
+![img](https://raw.githubusercontent.com/yisier/nps/master/docs/.vuepress/public/image/new/new3.jpg)
 
-从 [releases](https://github.com/yisier/nps/releases) 下载对应平台版本。服务端 `nps` 和客户端 `npc` 是独立的压缩包。
-
-### 服务端
-
-```shell
-./nps -server    # 交互菜单：安装/卸载/启动/停止/更新
-```
-
-首次启动自动生成 `conf/nps.conf`，随机生成 `web_password`、`auth_key`、`auth_crypt_key`，请从启动日志或 `nps.conf` 获取。
-
-![img](https://raw.githubusercontent.com/yisier/nps/master/docs/.vuepress/public/image/new/server.png)
-
-### 客户端
-
-```shell
-./npc            # 直接双击运行，按提示输入即可
-```
-
-在 Web 后台复制【快捷启动命令】，客户端粘贴即可注册系统服务、启停或卸载。
-
-
-![image](https://raw.githubusercontent.com/yisier/nps/master/docs/.vuepress/public/image/new/cmd.png)
-
-
-#### GUI
-
-![image](https://yisier.github.io/nps/image/new/gui.png)
-
-
-#### 命令行直接启动
-
-```shell
-npc -server=ip:8024 -vkey=xxx                           # 标准
-npc -server=ip:8025 -vkey=xxx -tls_enable=true           # TLS 桥接
-npc -server=ip:8024 -vkey=vkey1,vkey2                    # 多隧道
-```
-
----
 
 ## 📃 License
 
