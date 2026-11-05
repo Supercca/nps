@@ -6,15 +6,15 @@ import (
 	"testing"
 )
 
-func TestClearLogFileTruncates(t *testing.T) {
+func TestTruncateFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "nps.log")
 	if err := os.WriteFile(path, []byte("hello log content"), 0644); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := clearLogFile(path); err != nil {
-		t.Fatalf("clearLogFile should not fail: %v", err)
+	if err := truncateFile(path); err != nil {
+		t.Fatalf("truncateFile should not fail: %v", err)
 	}
 
 	info, err := os.Stat(path)
@@ -44,11 +44,11 @@ func TestClearLogFileTruncates(t *testing.T) {
 	}
 }
 
-func TestClearLogFileMissingFile(t *testing.T) {
+func TestTruncateFileMissingFile(t *testing.T) {
 	dir := t.TempDir()
-	// 文件不存在时不应报错，清理流程要能继续处理后面的文件。
-	if err := clearLogFile(filepath.Join(dir, "nope.log")); err != nil {
-		t.Fatalf("missing file should be ignored, got %v", err)
+	// 文件不存在时不应报错。
+	if err := truncateFile(filepath.Join(dir, "nope.log")); err == nil {
+		t.Fatal("missing file should return an error")
 	}
 }
 

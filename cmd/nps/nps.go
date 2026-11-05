@@ -123,14 +123,11 @@ func main() {
 	svcConfig.Arguments = append(svcConfig.Arguments, "service")
 	if len(os.Args) > 1 && os.Args[1] == "service" {
 		_ = logs.SetLogger(logs.AdapterFile, fileLoggerConfig(level, logPath))
-		// 记录实际使用的日志文件路径，供 Web 端日志清理功能定位文件。
-		common.SetLogFilePath(logPath)
 	} else {
 		_ = logs.SetLogger(logs.AdapterConsole, `{"level":`+level+`,"color":true}`)
 	}
-	// beego 的 SetLogger 是追加语义：日志会同时写入所有已注册的 logger。
-	// 这里额外挂一个内存环形缓冲，供 Web 端日志页面读取。
-	_ = logs.SetLogger("store", `{"level":`+level+`}`)
+	// 记录日志文件路径，供 Web 端日志页面读取与清理。
+	common.SetLogFilePath(logPath)
 	if !common.IsWindows() {
 		svcConfig.Dependencies = []string{
 			"Requires=network.target",

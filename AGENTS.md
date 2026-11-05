@@ -103,29 +103,28 @@ Web 后台「全局参数 → 安全设置 → 境外 IP 自动加入黑名单�
 - **只隐藏入口**：对应页面仍可通过网址直接访问。
 - `global`（全局参数）**不可隐藏**（`ProtectedMenus`）—— 它是唯一能改回本配置的地方，
   隐藏后会造成死锁。UI 上该项为 disabled 状态，后端 `filterHiddenMenus` 也会剔除。
-- 菜单 key：`index`/`client`/`host`/`tcp`/`udp`/`http`/`socks5`/`secret`/`p2p`/`file`/`global`/`help`
+- 菜单 key：`index`/`client`/`host`/`tcp`/`udp`/`http`/`socks5`/`secret`/`p2p`/`file`/`global`/`log`/`help`
 
 ## 服务端日志（Web 端查看与清理）
 
 Web 左侧新增「服务端日志」菜单项（key `log`），管理员可免登录服务器直接查看日志。
 
-- **数据来源**：内存环形缓冲，不读文件。
-  - `lib/common/logs.go` 的 `StoreMsg` 被重写为**线程安全的环形缓冲**（默认 2000 条），
-    每条记录带 `seq`（单调递增）、时间戳、级别、内容。
-  - beego 的 `logs.SetLogger` 是**追加**语义（`bl.outputs = append(...)`），
-    日志会写入所有已注册的 logger。因此在 `cmd/nps/nps.go` 里额外挂一个
-    `logs.SetLogger("store", ...)` 即可拿到内存日志流，**无需改动既有 console/file 输出**。
-  - 用 `seq` 而不是行号做增量：环形缓冲滚动时行号会变，序号不会回退。
+- **数据来源**：**直接读取服务器上的日志文件**，不做内存缓冲、不做实时推送。
+  - `common.LogFileFamily(path)` 列出日志文件家族：当前日志文件 + beego 轮转出来的历史文件。
+    beego 的轮转命名是 `fileNameOnly + "." + 日期格式 + "." + %03d + 后缀`（`logs/file.go`），
+    例如 `nps.log` → `nps..001.log`；实现不硬编码格式，而是按
+    「同目录 + 同 basename 前缀 + 同后缀」匹配，覆盖所有轮转变体且不会误伤其他文件。
+  - `common.ReadLogTail(path, maxLines)` 读文件末尾若干行：最多回读 512KB 再按行切分，
+    避免把整个大文件读进内存。
+  - 日志文件路径由 `cmd/nps/nps.go` 通过 `common.SetLogFilePath(logPath)` 记录，
+    取自 `-log_path` 参数或 `nps.conf` 的 `log_path`（相对路径按进程工作目录解析，
+    与 beego 打开文件的方式一致）。
 - **接口**（`web/controllers/log.go`，全部仅管理员）：
-  - `GET /log/list?offset=N&limit=M` — 返回 `seq > N` 的增量条目（单次上限 500）。
-  - `POST /log/clear` — 清空内存缓冲 + 截断磁盘上的日志文件。
-- **清理磁盘文件**：`common.LogFileFamily(path)` 列出日志文件家族 —— 当前日志文件 +
-  beego 轮转出来的历史文件。beego 的轮转命名是
-  `fileNameOnly + "." + 日期格式 + "." + %03d + 后缀`（`logs/file.go`），
-  例如 `nps.log` → `nps..001.log`；实现不硬编码格式，而是按
-  「同目录 + 同 basename 前缀 + 同后缀」匹配，覆盖所有轮转变体且不会误伤其他文件。
-  所有文件统一 **truncate** 而非删除：beego 持有当前文件的句柄，删除会让后续日志
-  写进已删除的 inode（空间不释放），Windows 上更是直接失败。
+  - `GET /log/list?lines=N` — 读取各日志文件末尾 N 行（默认 500、上限 5000），
+    按「当前文件在前、轮转文件按名称倒序」返回。
+  - `POST /log/clear` — **物理删除**日志文件。删除当前日志文件时 beego 仍持有句柄：
+    Linux 上删除成功（后续日志会写进已删除的 inode，需重启服务才会重新生成文件），
+    Windows 上文件被占用删不掉，此时自动退化为清空文件内容，结果如实返回给前端。
 - **权限**：日志含客户端 vkey（例如「隧道[x]流量已经超出」），因此接口与页面
   **仅管理员可见**。
 - **已知问题（已修）**：`cmd/nps/nps.go` 原先用 `logPath :=` 声明新变量遮蔽了外层变量，

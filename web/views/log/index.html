@@ -9,9 +9,6 @@
                 <button class="btn btn-xs btn-default" type="button" id="logToggle">
                     <i class="fa fa-pause"></i> <span id="logToggleText" langtag="word-logpause"></span>
                 </button>
-                <button class="btn btn-xs btn-default" type="button" id="logCopy">
-                    <i class="fa fa-copy"></i> <span langtag="word-copy"></span>
-                </button>
                 <button class="btn btn-xs btn-default" type="button" id="logDownload">
                     <i class="fa fa-download"></i> <span langtag="word-download"></span>
                 </button>
@@ -55,11 +52,9 @@
 </div>
 
 <script>
-    var logOffset = 0;
-    var logLatest = 0;
     var logPaused = false;
     var logTimer = null;
-    var logAll = [];
+    var logFiles = [];
 
     function logEscape(text) {
         return String(text == null ? '' : text)
@@ -67,21 +62,21 @@
             .replace(/"/g, '&quot;');
     }
 
+    // beego 的日志行格式：2026/11/05 14:48:50.666 [I] [file.go:123]  message
+    function logLevelOf(line) {
+        var m = line.match(/^\S+ \S+ \[[A-Z]\]/);
+        if (!m) return '';
+        var flags = { 'E': 'error', 'W': 'warning', 'N': 'notice', 'I': 'info', 'D': 'debug' };
+        return flags[m[0].charAt(m[0].length - 2)] || '';
+    }
+
     function logLevelColor(level) {
         switch (level) {
-            case 'emergency':
-            case 'alert':
-            case 'critical':
-            case 'error':
-                return '#f97583';
-            case 'warning':
-                return '#e2c08d';
-            case 'notice':
-                return '#7ee787';
-            case 'debug':
-                return '#8b949e';
-            default:
-                return '#c5c8c6';
+            case 'error': return '#f97583';
+            case 'warning': return '#e2c08d';
+            case 'notice': return '#7ee787';
+            case 'debug': return '#8b949e';
+            default: return '#c5c8c6';
         }
     }
 
@@ -90,32 +85,41 @@
         var level = $('#logLevel').val();
         var html = '';
         var shown = 0;
-        for (var i = 0; i < logAll.length; i++) {
-            var e = logAll[i];
-            if (level && e.level !== level) continue;
-            if (keyword && e.msg.toLowerCase().indexOf(keyword) < 0) continue;
-            shown++;
-            html += '<div><span style="color:#6e7681">' + logEscape(e.time) + '</span> '
-                + '<span style="color:#79c0ff">[' + logEscape(e.level) + ']</span> '
-                + '<span style="color:' + logLevelColor(e.level) + '">' + logEscape(e.msg) + '</span></div>';
+        var total = 0;
+        for (var f = 0; f < logFiles.length; f++) {
+            var file = logFiles[f];
+            var fileHtml = '';
+            var fileShown = 0;
+            for (var i = 0; i < file.lines.length; i++) {
+                var line = file.lines[i];
+                total++;
+                var lv = logLevelOf(line);
+                if (level && lv !== level) continue;
+                if (keyword && line.toLowerCase().indexOf(keyword) < 0) continue;
+                fileShown++;
+                fileHtml += '<div><span style="color:' + logLevelColor(lv) + '">'
+                    + logEscape(line) + '</span></div>';
+            }
+            if (fileShown === 0) continue;
+            shown += fileShown;
+            html += '<div style="margin:6px 0 2px;color:#79c0ff;font-weight:bold;">=== '
+                + logEscape(file.name) + ' (' + file.size + ' bytes) ===</div>' + fileHtml;
         }
         if (html === '') {
             html = '<div style="color:#8b949e">(no log)</div>';
         }
         var box = document.getElementById('logConsole');
         var atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 30;
+        var oldTop = box.scrollTop;
         box.innerHTML = html;
         if (atBottom) {
             box.scrollTop = box.scrollHeight;
+        } else {
+            box.scrollTop = oldTop;
         }
-        $('#logStat').text(logAll.length + ' / ' + logLatest
-            + (keyword || level ? ' (filtered: ' + shown + ')' : ''));
-    }
-
-    function logText() {
-        return logAll.map(function (e) {
-            return e.time + ' [' + e.level + '] ' + e.msg;
-        }).join('\n');
+        $('#logStat').text(total + ' 行'
+            + (keyword || level ? ' (过滤后 ' + shown + ' 行)' : '')
+            + ' / ' + logFiles.length + ' 个文件');
     }
 
     function logFetch() {
@@ -123,21 +127,11 @@
         $.ajax({
             type: 'GET',
             url: '{{.web_base_url}}/log/list',
-            data: { offset: logOffset, limit: 500 },
+            data: { lines: 1000 },
             dataType: 'json',
             success: function (res) {
                 if (!res || res.status !== 1) return;
-                if (res.entries && res.entries.length > 0) {
-                    for (var i = 0; i < res.entries.length; i++) {
-                        logAll.push(res.entries[i]);
-                    }
-                    // 页面侧也保留上限，避免长时间挂机后浏览器内存膨胀。
-                    if (logAll.length > 3000) {
-                        logAll = logAll.slice(logAll.length - 3000);
-                    }
-                    logOffset = res.entries[res.entries.length - 1].seq;
-                }
-                logLatest = res.latest;
+                logFiles = res.files || [];
                 logRender();
             }
         });
@@ -157,24 +151,14 @@
             logPaused = !logPaused;
             $('#logToggleText').attr('langtag', logPaused ? 'word-logrun' : 'word-logpause');
             $('#logToggle').find('i').attr('class', logPaused ? 'fa fa-play' : 'fa fa-pause');
-            // 切换后的文案需要重新走一次 i18n 填充
             $('body').setLang('');
         });
-        $('#logCopy').on('click', function () {
-            var text = logText();
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(text);
-            } else {
-                var ta = document.createElement('textarea');
-                ta.value = text;
-                document.body.appendChild(ta);
-                ta.select();
-                document.execCommand('copy');
-                document.body.removeChild(ta);
-            }
-        });
         $('#logDownload').on('click', function () {
-            var blob = new Blob([logText()], { type: 'text/plain;charset=utf-8' });
+            var text = '';
+            for (var f = 0; f < logFiles.length; f++) {
+                text += '=== ' + logFiles[f].name + ' ===\n' + logFiles[f].lines.join('\n') + '\n\n';
+            }
+            var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
             var a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
             a.download = 'nps-log-' + new Date().toISOString().replace(/[:.]/g, '-') + '.txt';
@@ -190,8 +174,7 @@
                 url: '{{.web_base_url}}/log/clear',
                 success: function (res) {
                     if (res && res.status === 1) {
-                        logAll = [];
-                        logOffset = 0;
+                        logFiles = [];
                         logRender();
                     }
                 }
