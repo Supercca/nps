@@ -19,10 +19,10 @@ func (s *GlobalController) Index() {
 	blackIpList := ""
 	serverUrl := ""
 	if global != nil {
-		blackIpList = strings.Join(global.BlackIpList, "\r\n")
+		// 取快照副本，避免与后台的自动拉黑并发读写同一个切片。
+		blackIpList = strings.Join(file.GetDb().GetGlobalBlackIpList(), "\r\n")
 		serverUrl = global.ServerUrl
 	}
-
 	s.Data["globalBlackIpList"] = blackIpList
 	s.Data["serverUrl"] = serverUrl
 	s.Data["allowPorts"] = settings.AllowPorts
@@ -41,6 +41,7 @@ func (s *GlobalController) Index() {
 	s.Data["systemInfoDisplay"] = settings.SystemInfoDisplay
 	s.Data["httpAddOriginHeader"] = settings.HttpAddOriginHeader
 	s.Data["blockForeignIp"] = settings.BlockForeignIp
+	s.Data["autoBlockForeignIp"] = settings.AutoBlockForeignIp
 
 	s.display("global/index")
 }
@@ -58,7 +59,7 @@ func (s *GlobalController) Save() {
 	if global == nil {
 		global = new(file.Glob)
 	}
-	global.BlackIpList = RemoveRepeatedElement(strings.Split(s.getEscapeString("globalBlackIpList"), "\r\n"))
+	file.GetDb().SetGlobalBlackIpList(global, RemoveRepeatedElement(strings.Split(s.getEscapeString("globalBlackIpList"), "\r\n")))
 	global.ServerUrl = s.getEscapeString("serverUrl")
 	global.AllowPorts = globalStringPtr(strings.TrimSpace(s.getEscapeString("allowPorts")))
 	global.IpLimit = globalBoolPtr(s.GetBoolNoErr("ipLimit"))
@@ -76,6 +77,7 @@ func (s *GlobalController) Save() {
 	global.SystemInfoDisplay = globalBoolPtr(s.GetBoolNoErr("systemInfoDisplay"))
 	global.HttpAddOriginHeader = globalBoolPtr(s.GetBoolNoErr("httpAddOriginHeader"))
 	global.BlockForeignIp = globalBoolPtr(s.GetBoolNoErr("blockForeignIp"))
+	global.AutoBlockForeignIp = globalBoolPtr(s.GetBoolNoErr("autoBlockForeignIp"))
 
 	if err := file.GetDb().SaveGlobal(global); err != nil {
 		s.AjaxErr(err.Error())

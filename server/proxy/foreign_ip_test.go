@@ -27,9 +27,20 @@ func setupForeignIpTestConf(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	if err := os.WriteFile(filepath.Join(confDir, "global.json"), []byte("{}"), 0644); err != nil {
+		t.Fatal(err)
+	}
 	oldConfPath := common.ConfPath
 	common.ConfPath = confPath
+
+	// JsonDb 的路径在首次 GetDb() 时就固定了，这里把它指向测试目录，
+	// 这样 global.json 的落盘行为才能在测试中被断言。
+	db := file.GetDb()
+	oldGlobalFilePath := db.JsonDb.GlobalFilePath
+	db.JsonDb.GlobalFilePath = filepath.Join(confDir, "global.json")
+
 	t.Cleanup(func() {
+		db.JsonDb.GlobalFilePath = oldGlobalFilePath
 		common.ConfPath = oldConfPath
 	})
 }

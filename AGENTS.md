@@ -58,6 +58,24 @@ Web 后台「全局参数 → 安全设置 → 禁止国外 IP 访问」开关�
   自行取字节时必须先 `To4()`，否则会读到全零前缀。掩码计算也不能写成 `^uint32(0) << n`
   （常量溢出），必须先赋给变量再移位。
 
+### 境外 IP 自动加入全局黑名单
+
+Web 后台「全局参数 → 安全设置 → 境外 IP 自动加入黑名单」开关（`global.json` 的 `AutoBlockForeignIp`）。
+**依赖**「禁止国外 IP 访问」开关（`BlockForeignIp`）——主开关关闭时本开关不产生任何效果。
+
+- **触发点**：`server/proxy/base.go:IsForeignIp()` 确认是境外 IP 之后调用
+  `file.GetDb().AddGlobalBlackIp(ip)`，追加到 `global.BlackIpList` 并立即落盘 `conf/global.json`。
+- **入口 API**（`lib/file/global.go`）：
+  - `AddGlobalBlackIp(ip) bool` — 去重后追加并落盘；已存在或达到 `MaxGlobalBlackIpCount`（10000）时返回 false。
+  - `GetGlobalBlackIpList() []string` — 返回黑名单**副本**。
+  - `SetGlobalBlackIpList(global, list)` — Web 后台保存时整体替换。
+- **并发约束（重要）**：`server/proxy/base.go:in()` 与 `lib/common/util.go:in()` 都是
+  「先 `sort.Strings` 再二分查找」，会**就地排序入参切片**。因此全局黑名单的
+  所有读写都必须走 `lib/file/global.go` 的 `globalBlackIpLock`，且查找时只能传副本，
+  否则并发连接会同时排序/追加同一份切片（数据竞争，甚至切片损坏）。
+  客户端级黑名单 `client.BlackIpList` 仍由 `common.IsBlackIp` 直接排序共享切片，
+  是遗留问题，不在自动拉黑的影响范围内。
+
 ## 流量统计与重置
 
 - 三层计数器：`client.Flow`（客户端总量）、`task.Flow`（隧道）、`host.Flow`（域名解析），

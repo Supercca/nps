@@ -1,6 +1,8 @@
 package file
 
 import (
+	"sync"
+
 	"github.com/astaxie/beego"
 )
 
@@ -24,6 +26,77 @@ type GlobalSettings struct {
 	HttpAddOriginHeader     bool
 	// BlockForeignIp 为 true 时拒绝境外 IP 访问（通过内置中国大陆 CIDR 段库判定）。
 	BlockForeignIp bool
+	// AutoBlockForeignIp 为 true 时，把判定为境外的 IP 自动追加到全局黑名单。
+	// 仅在 BlockForeignIp 开启时生效。
+	AutoBlockForeignIp bool
+}
+
+// MaxGlobalBlackIpCount 是全局黑名单的最大条目数。
+// 自动拉黑时超过该上限就不再追加，避免被大量境外 IP 撑爆内存与 global.json。
+const MaxGlobalBlackIpCount = 10000
+
+// globalBlackIpLock 保护全局黑名单的读写。
+// 代理层每来一个连接都要在黑名单里查找一次，而查找用的 in() 会先就地排序
+// 入参切片（sort.Strings）；不加锁的话并发连接会同时排序同一份切片，
+// 自动拉黑时更会与 append 并发，导致切片损坏。
+var globalBlackIpLock sync.Mutex
+
+// GetGlobalBlackIpList 返回全局黑名单的副本。
+// 调用方拿到的是快照，不会与后台的自动拉黑产生数据竞争。
+func (s *DbUtils) GetGlobalBlackIpList() []string {
+	globalBlackIpLock.Lock()
+	defer globalBlackIpLock.Unlock()
+	global := s.GetGlobal()
+	if global == nil {
+		return nil
+	}
+	list := make([]string, len(global.BlackIpList))
+	copy(list, global.BlackIpList)
+	return list
+}
+
+// AddGlobalBlackIp 把 ip 追加到全局黑名单并立即落盘。
+// 返回 true 表示确实新增了一条；ip 为空、已在黑名单中或黑名单已达上限时返回 false。
+func (s *DbUtils) AddGlobalBlackIp(ip string) bool {
+	if ip == "" {
+		return false
+	}
+
+	globalBlackIpLock.Lock()
+	defer globalBlackIpLock.Unlock()
+
+	global := s.GetGlobal()
+	if global == nil {
+		global = new(Glob)
+	}
+	for _, item := range global.BlackIpList {
+		if item == ip {
+			return false
+		}
+	}
+	if len(global.BlackIpList) >= MaxGlobalBlackIpCount {
+		return false
+	}
+	global.BlackIpList = append(global.BlackIpList, ip)
+	s.JsonDb.Global = global
+	s.JsonDb.StoreGlobalToJsonFile()
+	return true
+}
+
+// SetGlobalBlackIpList 用 list 替换全局黑名单（Web 后台保存时使用）。
+// global 传入调用方当前持有的全局配置对象，保证黑名单与其他设置落在同一份数据上；
+// 落盘由调用方随后执行的 SaveGlobal 负责。
+func (s *DbUtils) SetGlobalBlackIpList(global *Glob, list []string) {
+	globalBlackIpLock.Lock()
+	defer globalBlackIpLock.Unlock()
+	if global == nil {
+		global = s.GetGlobal()
+		if global == nil {
+			global = new(Glob)
+		}
+	}
+	global.BlackIpList = list
+	s.JsonDb.Global = global
 }
 
 func boolPtrValue(v *bool) bool {
@@ -75,6 +148,7 @@ func (s *DbUtils) GetGlobalSettings() GlobalSettings {
 	settings.SystemInfoDisplay = boolPtrValue(global.SystemInfoDisplay)
 	settings.HttpAddOriginHeader = boolPtrValue(global.HttpAddOriginHeader)
 	settings.BlockForeignIp = boolPtrValue(global.BlockForeignIp)
+	settings.AutoBlockForeignIp = boolPtrValue(global.AutoBlockForeignIp)
 	return settings
 }
 
@@ -168,6 +242,10 @@ func (s *DbUtils) MigrateGlobalFromAppConfig() {
 	}
 	if global.BlockForeignIp == nil {
 		global.BlockForeignIp = boolPtr(appConfigBool("block_foreign_ip", false))
+		changed = true
+	}
+	if global.AutoBlockForeignIp == nil {
+		global.AutoBlockForeignIp = boolPtr(appConfigBool("auto_block_foreign_ip", false))
 		changed = true
 	}
 

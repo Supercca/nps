@@ -148,13 +148,12 @@ func (s *BaseServer) DealClient(c *conn.Conn, client *file.Client, addr string,
 // 判断访问地址是否在全局黑名单内
 func IsGlobalBlackIp(ipPort string) bool {
 	// 判断访问地址是否在全局黑名单内
-	global := file.GetDb().GetGlobal()
-	if global != nil {
-		ip := common.GetIpByAddr(ipPort)
-		if in(ip, global.BlackIpList) {
-			logs.Error("IP地址[" + ip + "]在全局黑名单列表内")
-			return true
-		}
+	ip := common.GetIpByAddr(ipPort)
+	// 传入副本：in() 会先就地排序入参切片，直接传共享切片会造成数据竞争。
+	list := file.GetDb().GetGlobalBlackIpList()
+	if in(ip, list) {
+		logs.Error("IP地址[" + ip + "]在全局黑名单列表内")
+		return true
 	}
 
 	return false
@@ -163,8 +162,12 @@ func IsGlobalBlackIp(ipPort string) bool {
 // IsForeignIp 判断访问来源是否为境外 IP。
 // 仅在全局参数「禁止国外 IP 访问」开启时生效：命中中国大陆 IP 段库之外的公网地址
 // 视为境外并拒绝；私有/保留地址与 IPv6 一律放行。
+//
+// 若同时开启了「境外 IP 自动加入黑名单」，确认是境外地址后会把该 IP 追加到
+// 全局黑名单（global.BlackIpList）并立即落盘。
 func IsForeignIp(ipPort string) bool {
-	if !file.GetDb().GetGlobalSettings().BlockForeignIp {
+	settings := file.GetDb().GetGlobalSettings()
+	if !settings.BlockForeignIp {
 		return false
 	}
 	ip := common.GetIpByAddr(ipPort)
@@ -173,6 +176,11 @@ func IsForeignIp(ipPort string) bool {
 	}
 	if geo.IsForeignIPStr(ip) {
 		logs.Warn("IP地址[" + ip + "]属于境外地址，已按「禁止国外IP访问」策略拦截")
+		if settings.AutoBlockForeignIp {
+			if file.GetDb().AddGlobalBlackIp(ip) {
+				logs.Warn("IP地址[" + ip + "]已自动加入全局黑名单")
+			}
+		}
 		return true
 	}
 	return false

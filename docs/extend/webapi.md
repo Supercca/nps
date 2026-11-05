@@ -395,5 +395,6 @@ POST /global/save/
 | globalBlackIpList | 全局黑名单 IP 列表，`\r\n` 分隔 |
 | serverUrl | 服务端访问地址（用于更正显示 IP） |
 | blockForeignIp | `1` 开启「禁止国外 IP 访问」；不传或 `0` 表示关闭 |
+| autoBlockForeignIp | `1` 开启「境外 IP 自动加入黑名单」；不传或 `0` 表示关闭。仅在 `blockForeignIp` 开启时生效：被判定为境外的 IP 会自动追加到全局黑名单并立即落盘 |
 
 ---

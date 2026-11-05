@@ -267,6 +267,9 @@ type Glob struct {
 	HttpAddOriginHeader     *bool   `json:"HttpAddOriginHeader,omitempty"`
 	// BlockForeignIp 为 true 时，服务端拒绝来自中国大陆 IP 段以外的访问。
 	BlockForeignIp *bool `json:"BlockForeignIp,omitempty"`
+	// AutoBlockForeignIp 为 true 时，把被判定为境外的 IP 自动追加到全局黑名单。
+	// 仅在 BlockForeignIp 开启时生效。
+	AutoBlockForeignIp *bool `json:"AutoBlockForeignIp,omitempty"`
 
 	sync.RWMutex
 }
