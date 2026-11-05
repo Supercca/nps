@@ -103,6 +103,9 @@ func (s *LogController) List() {
 //   - Linux 上删除成功，但后续日志会写进已删除的 inode，需要重启服务才会重新生成文件。
 //   - Windows 上文件被占用无法删除，此时退化为清空文件内容。
 //
+// 因此前端在清理成功后会调用 /global/restart 同步重启服务，
+// 使日志文件得以重新生成（见 web/views/log/index.html 的 restartAfterClear）。
+//
 // POST /log/clear
 func (s *LogController) Clear() {
 	if !s.logAdminOnly() {

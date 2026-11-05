@@ -169,6 +169,7 @@
         $('#logClear').on('click', function () {
             var tip = $('#logClearConfirm').text() || 'Clear the logs?';
             if (!confirm(tip)) return;
+            var $btn = $(this).prop('disabled', true);
             $.ajax({
                 type: 'POST',
                 url: '{{.web_base_url}}/log/clear',
@@ -176,9 +177,65 @@
                     if (res && res.status === 1) {
                         logFiles = [];
                         logRender();
+                        // 清理完成后同步重启服务：Linux 上删除当前日志文件后
+                        // beego 仍持有旧 inode 句柄，重启后才会重新生成日志文件
+                        restartAfterClear();
+                    } else {
+                        $btn.prop('disabled', false);
                     }
+                },
+                error: function () {
+                    $btn.prop('disabled', false);
                 }
             });
         });
     });
+
+    // 清理日志后重启服务：POST /global/restart -> 轮询 /global/restartpid
+    // 直到 PID 变化（新进程接管）再刷新页面，逻辑与全局参数页的重启按钮一致
+    function restartAfterClear() {
+        $.ajax({
+            type: 'POST',
+            url: '{{.web_base_url}}/global/restart',
+            data: {},
+            success: function (res) {
+                if (res && res.status) {
+                    var oldPid = String(res.id);
+                    setTimeout(function () { pollRestartAfterClear(oldPid, 0); }, 3000);
+                } else {
+                    // 重启指令被拒（理论上日志页仅管理员可达，不应出现），只刷新页面
+                    location.reload();
+                }
+            },
+            error: function () {
+                // 请求被掐断说明进程正在退出，同样进入轮询
+                setTimeout(function () { pollRestartAfterClear('-1', 0); }, 3000);
+            }
+        });
+    }
+
+    function pollRestartAfterClear(oldPid, tries) {
+        // 最长轮询 2 分钟（60 次 x 2s），超时直接刷新页面交给用户判断
+        if (tries >= 60) {
+            location.reload();
+            return;
+        }
+        $.ajax({
+            type: 'GET',
+            url: '{{.web_base_url}}/global/restartpid?_t=' + Date.now(),
+            dataType: 'text',
+            cache: false,
+            success: function (text) {
+                // PID 变化，或响应不再是纯数字（会话失效跳转登录页）都说明已切换进程
+                if ($.trim(text) !== oldPid || !/^\d+$/.test($.trim(text))) {
+                    location.reload();
+                } else {
+                    setTimeout(function () { pollRestartAfterClear(oldPid, tries + 1); }, 2000);
+                }
+            },
+            error: function () {
+                setTimeout(function () { pollRestartAfterClear(oldPid, tries + 1); }, 2000);
+            }
+        });
+    }
 </script>

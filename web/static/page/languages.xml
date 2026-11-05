@@ -470,6 +470,18 @@
 		<zh-CN>运行状态</zh-CN>
 		<en-US>Run status</en-US>
 	</lang>
+	<lang id="word-servicemanager">
+		<zh-CN>服务管理</zh-CN>
+		<en-US>Service Management</en-US>
+	</lang>
+	<lang id="word-restartservice">
+		<zh-CN>重启服务</zh-CN>
+		<en-US>Restart Service</en-US>
+	</lang>
+	<lang id="info-restartservicetips">
+		<zh-CN>重启 nps 服务端进程，使 nps.conf 等启动级配置生效。重启期间面板与所有隧道会短暂中断，完成后页面自动恢复。</zh-CN>
+		<en-US>Restart the nps server process to apply startup-level settings in nps.conf. The panel and all tunnels will be briefly unavailable, the page reloads automatically when the service is back.</en-US>
+	</lang>
 	<lang id="word-save">
 		<zh-CN>保存</zh-CN>
 		<en-US>Save</en-US>
@@ -878,6 +890,10 @@
 		<lang id="resetflow">
 			<zh-CN>你确定要重置该客户端的流量统计吗？</zh-CN>
 			<en-US>Are you sure you want to reset the traffic statistics of this client?</en-US>
+		</lang>
+		<lang id="restart">
+			<zh-CN>你确定要重启服务吗？重启期间面板和隧道会短暂中断。</zh-CN>
+			<en-US>Are you sure you want to restart the service? The panel and tunnels will be briefly unavailable.</en-US>
 		</lang>
 		<lang id="noselected">
 			<zh-CN>请先选择要删除的项目！</zh-CN>
@@ -1314,8 +1330,8 @@
 		<en-US>Filter by keyword</en-US>
 	</lang>
 	<lang id="info-logcleartips">
-		<zh-CN>确定要清理日志吗？将清空内存中的日志缓冲，并清空磁盘上的日志文件内容。</zh-CN>
-		<en-US>Clear the logs? This empties the in-memory log buffer and truncates the log files on disk.</en-US>
+		<zh-CN>确定要清理日志吗？将清空内存中的日志缓冲、删除磁盘上的日志文件，并重启服务以重新生成日志文件。</zh-CN>
+		<en-US>Clear the logs? This empties the in-memory log buffer, deletes the log files on disk, and restarts the service so that fresh log files are created.</en-US>
 	</lang>
 	<lang id="word-allowports">
 		<zh-CN>允许端口</zh-CN>

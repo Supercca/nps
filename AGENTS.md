@@ -147,6 +147,19 @@ Web 左侧新增「服务端日志」菜单项（key `log`），管理员可免�
   的 `word-resetflow` / `confirm/resetflow` / `reply/*` 中维护。
 
 
+## Web 面板重启服务
+
+- 全局参数页「服务管理 → 重启服务」按钮（仅管理员显示）→ `web/controllers/global.go:Restart()`（校验 `isAdmin`）→ `lib/restart`。
+- **先应答、后重启**：handler 里起 goroutine 延迟 1 秒执行重启，保证 JSON 响应先送达浏览器；重启前调用四个 `Store*ToJsonFile()` 落盘一次，避免 flowSession 周期间隔内的流量统计丢失。
+- 重启策略（`lib/restart/restart.go:Do()`）：
+  - 命令行含 `service` 参数（SCM/systemd 拉起）→ `service.Control(svc, "restart")` 交给服务管理器停旧起新；服务未安装则退化为原地自重启。
+  - 控制台模式 → 平台分支：Unix（`restart_unix.go`）用 `syscall.Exec` 原地替换镜像（PID 不变，socket 随 CLOEXEC 关闭后重新绑定）；Windows（`restart_windows.go`）启动同路径子进程后立即 `os.Exit(0)` 释放端口（子进程初始化耗时远大于父进程退出耗时，无端口竞争）。
+- **前端恢复判定**：`Restart` 响应携带当前 PID；前端 3 秒后轮询 `GET /global/restartpid`（返回纯文本 PID，auth_key 或会话均可过 Prepare 鉴权），直到 PID 变化或响应不再是数字（会话失效跳登录页）才 reload，避免把尚未退出的旧进程误判为已恢复。最长轮询 2 分钟后强制刷新。
+- 会话为内存型（`server/proxy/tcp.go:69` 开启 SessionOn），重启后所有登录状态失效，用户需重新登录，属预期行为。
+- 新增代理外的全局路由无需注册：`web/routers/router.go` 已 `AutoRouter(&GlobalController{})`，`Restart`/`RestartPid` 自动映射为 `/global/restart`、`/global/restartpid`。
+- **日志页「清理日志」联动重启**：`/log/clear` 在 Linux 上删除当前日志文件后 beego 仍持有旧 inode 句柄，前端（`web/views/log/index.html`）清理成功后自动调用 `/global/restart` 并复用同一套 PID 轮询逻辑，重启后日志文件才得以重新生成；确认弹窗文案已注明会重启服务。
+
+
 **连接类型**：`main`（信号/心跳）、`chan`（mux 数据隧道）、`conf`（配置下发）、`rgst`（IP 注册）、`sert`（secret 直连）、`file`（文件传输）、`p2pm`（P2P 打洞）。
 
 ## 代理模式

@@ -303,6 +303,28 @@
                         </div>
                     </div>
                 </div>
+
+                {{if eq true .isAdmin}}
+                <div class="setting-card">
+                    <div class="setting-card-head">
+                        <i class="fa fa-power-off"></i><span langtag="word-servicemanager"></span>
+                    </div>
+                    <div class="setting-card-body">
+                        <div class="setting-row">
+                            <div class="setting-main">
+                                <div class="setting-title" langtag="word-restartservice"></div>
+                                <div class="setting-desc" langtag="info-restartservicetips"></div>
+                            </div>
+                            <div class="setting-control">
+                                <button class="btn btn-warning" type="button" id="btnRestartService"
+                                        onclick="restartService(this)">
+                                    <i class="fa fa-fw fa-sync"></i> <span langtag="word-restartservice"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {{end}}
             </div>
 
             <div class="col-lg-6">
@@ -556,3 +578,58 @@
         </div>
     </form>
 </div>
+
+<script>
+    // 重启服务：确认 -> POST /global/restart -> 轮询 /global/restartpid
+    // 直到 PID 变化（说明新进程已接管）再刷新页面，避免把还没退出的旧进程误判为已恢复
+    function restartService(btn) {
+        var confirmObj = (languages && languages['content'] && languages['content']['confirm']) ? languages['content']['confirm']['restart'] : null;
+        var confirmMsg = (confirmObj && (confirmObj[languages['current']] || confirmObj[languages['default']])) || 'Are you sure you want to restart the service?';
+        if (!confirm(confirmMsg)) return;
+        var $btn = $(btn).prop('disabled', true);
+        $.ajax({
+            type: 'POST',
+            url: window.nps.web_base_url + '/global/restart',
+            data: {},
+            success: function (res) {
+                if (res.status) {
+                    var oldPid = String(res.id);
+                    // 延迟 3 秒再开始轮询，给旧进程留出退出窗口
+                    setTimeout(function () { pollRestart(oldPid, 0); }, 3000);
+                } else {
+                    alert(langreply(res.msg));
+                    $btn.prop('disabled', false);
+                }
+            },
+            error: function () {
+                // 请求被掐断说明进程正在退出，同样进入轮询
+                setTimeout(function () { pollRestart('-1', 0); }, 3000);
+            }
+        });
+    }
+
+    function pollRestart(oldPid, tries) {
+        // 最长轮询 2 分钟（60 次 x 2s），超时直接刷新页面交给用户判断
+        if (tries >= 60) {
+            location.reload();
+            return;
+        }
+        $.ajax({
+            type: 'GET',
+            url: window.nps.web_base_url + '/global/restartpid?_t=' + Date.now(),
+            dataType: 'text',
+            cache: false,
+            success: function (text) {
+                // PID 变化，或响应不再是纯数字（会话失效跳转登录页）都说明已切换进程
+                if ($.trim(text) !== oldPid || !/^\d+$/.test($.trim(text))) {
+                    location.reload();
+                } else {
+                    setTimeout(function () { pollRestart(oldPid, tries + 1); }, 2000);
+                }
+            },
+            error: function () {
+                setTimeout(function () { pollRestart(oldPid, tries + 1); }, 2000);
+            }
+        });
+    }
+</script>

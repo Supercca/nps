@@ -1,10 +1,15 @@
 package controllers
 
 import (
+	"os"
+	"strconv"
 	"strings"
+	"time"
 
 	"ehang.io/nps/lib/file"
 	"ehang.io/nps/lib/notify"
+	"ehang.io/nps/lib/restart"
+	"github.com/astaxie/beego/logs"
 )
 
 type GlobalController struct {
@@ -102,6 +107,35 @@ func (s *GlobalController) Save() {
 		notify.NotifyBlackIpBatchAdded(added, "Web 后台手动添加")
 	}
 	s.AjaxOk("save success")
+}
+
+// Restart 重启服务端进程。仅管理员可用。
+// 先应答浏览器，再延迟 1 秒执行重启：进程退出前必须让响应先送达，
+// 否则前端会把它当成网络错误。重启前把内存中的 JSON 数据落盘一次，
+// 避免 flowSession 周期性持久化间隔内的流量统计丢失。
+func (s *GlobalController) Restart() {
+	if s.Data["isAdmin"] != true {
+		s.AjaxErr("permission denied")
+		return
+	}
+	go func() {
+		time.Sleep(time.Second)
+		file.GetDb().JsonDb.StoreHostToJsonFile()
+		file.GetDb().JsonDb.StoreTasksToJsonFile()
+		file.GetDb().JsonDb.StoreClientsToJsonFile()
+		file.GetDb().JsonDb.StoreGlobalToJsonFile()
+		if err := restart.Do(); err != nil {
+			logs.Error("restart service failed:", err)
+		}
+	}()
+	s.AjaxOkWithId("restart command accepted", os.Getpid())
+}
+
+// RestartPid 返回当前进程 PID，供前端在轮询时判断面板是否已由重启后的
+// 新进程接管（PID 变化即说明重启完成）。旧进程在等待退出的窗口期内
+// 仍会返回旧 PID，前端据此继续等待，避免把未重启误判为已恢复。
+func (s *GlobalController) RestartPid() {
+	s.Ctx.WriteString(strconv.Itoa(os.Getpid()))
 }
 
 // hiddenMenusParam 读取被隐藏的菜单列表。

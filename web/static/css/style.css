@@ -9937,3 +9937,40 @@ body.md-skin {
     width: 100%;
   }
 }
+
+/* ===== 固定左侧菜单栏：不跟随右侧内容上下滚动 ===== */
+/* 注意：不能用 position:sticky —— #wrapper 设有 overflow-x:hidden（4565 行），
+   会被浏览器当作滚动容器，sticky 便以它为参照而非视口，永远不生效。
+   因此改用 position:fixed，并手动补偿右侧内容区与底栏的偏移。 */
+@media (min-width: 769px) {
+  body:not(.body-small) nav.navbar-default.navbar-static-side {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 220px;
+    height: auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 2001;
+  }
+  /* 侧边栏脱离文档流后，右侧内容区整体右移 */
+  body:not(.body-small) #page-wrapper {
+    margin-left: 220px;
+  }
+  /* 折叠为图标栏（70px）时的补偿 */
+  body:not(.body-small).mini-navbar nav.navbar-default.navbar-static-side {
+    width: 70px;
+  }
+  body:not(.body-small).mini-navbar #page-wrapper {
+    margin-left: 70px;
+    width: calc(100% - 70px);
+  }
+  /* 底部版权条右移，避免被固定侧边栏遮住左侧文字 */
+  body:not(.body-small) .footer.fixed {
+    left: 220px;
+  }
+  body:not(.body-small).mini-navbar .footer.fixed {
+    left: 70px;
+  }
+}
