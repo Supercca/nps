@@ -141,7 +141,7 @@
 
     $(function () {
         logFetch();
-        logTimer = setInterval(logFetch, 3000);
+        logTimer = setInterval(logFetch, 30000);
 
         $('#logKeyword, #logLevel').on('input change', function () {
             logRender();
