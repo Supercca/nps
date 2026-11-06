@@ -1330,8 +1330,8 @@
 		<en-US>Filter by keyword</en-US>
 	</lang>
 	<lang id="info-logcleartips">
-		<zh-CN>确定要清理日志吗？将清空内存中的日志缓冲、删除磁盘上的日志文件，并重启服务以重新生成日志文件。</zh-CN>
-		<en-US>Clear the logs? This empties the in-memory log buffer, deletes the log files on disk, and restarts the service so that fresh log files are created.</en-US>
+		<zh-CN>确定要清理日志吗？将删除服务器上的日志文件，并重启服务以重新生成日志文件。</zh-CN>
+		<en-US>Clear the logs? This deletes the log files on the server and restarts the service so that fresh log files are created.</en-US>
 	</lang>
 	<lang id="word-allowports">
 		<zh-CN>允许端口</zh-CN>

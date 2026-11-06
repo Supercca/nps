@@ -47,7 +47,9 @@
                     border-radius:3px;white-space:pre-wrap;word-break:break-all;">
         </div>
 
-        <span id="logClearConfirm" class="hide" langtag="info-logcleartips"></span>
+        <!-- 确认文案容器：仅供 JS 读取文本用于 confirm 弹窗，不能在页面上直接显示。
+             Bootstrap 4 没有全局 .hide 规则（只有 .toast.hide），必须用 .d-none 隐藏。 -->
+        <span id="logClearConfirm" class="d-none" langtag="info-logcleartips"></span>
     </div>
 </div>
 
