@@ -322,6 +322,49 @@
                                 </button>
                             </div>
                         </div>
+
+                        <div class="setting-row">
+                            <div class="setting-main">
+                                <div class="setting-title" langtag="word-autorestart"></div>
+                                <div class="setting-desc" langtag="info-autorestarttips"></div>
+                            </div>
+                            <div class="setting-control">
+                                <div class="onoffswitch">
+                                    <input type="checkbox" name="autoRestartEnabled" value="1"
+                                           class="onoffswitch-checkbox" id="autoRestartEnabled"
+                                           {{if .autoRestartEnabled}}checked{{end}}>
+                                    <label class="onoffswitch-label" for="autoRestartEnabled">
+                                        <span class="onoffswitch-inner"></span>
+                                        <span class="onoffswitch-switch"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="setting-field" id="auto_restart_time">
+                            <label langtag="word-autorestarttime"></label>
+                            <input class="form-control" value="{{.autoRestartTime}}" type="text"
+                                   name="autoRestartTime" placeholder="04:00" maxlength="5">
+                            <span class="help-block m-b-none" langtag="info-autorestarttimetimeps"></span>
+                        </div>
+
+                        <div class="setting-field" id="auto_restart_weekdays">
+                            <label langtag="word-autorestartweekdays"></label>
+                            <div class="row">
+                                {{range .autoRestartWeekdays}}
+                                <div class="col-sm-3">
+                                    <div class="checkbox">
+                                        <label>
+                                            <input type="checkbox" name="autoRestartWeekdays" value="{{.Value}}"
+                                                   {{if .Checked}}checked{{end}}>
+                                            <span langtag="{{.Name}}"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                {{end}}
+                            </div>
+                            <span class="help-block m-b-none" langtag="info-autorestartweekdaystips"></span>
+                        </div>
                     </div>
                 </div>
                 {{end}}

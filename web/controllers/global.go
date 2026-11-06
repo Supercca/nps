@@ -53,6 +53,9 @@ func (s *GlobalController) Index() {
 	s.Data["barkQuietStart"] = settings.BarkQuietStart
 	s.Data["barkQuietEnd"] = settings.BarkQuietEnd
 	s.Data["menuOptions"] = menuOptionsWithState(settings.HiddenMenus)
+	s.Data["autoRestartEnabled"] = settings.AutoRestartEnabled
+	s.Data["autoRestartTime"] = settings.AutoRestartTime
+	s.Data["autoRestartWeekdays"] = weekdayOptionsWithState(settings.AutoRestartWeekdays)
 
 	s.display("global/index")
 }
@@ -97,6 +100,9 @@ func (s *GlobalController) Save() {
 	global.BarkQuietStart = globalStringPtr(strings.TrimSpace(s.getEscapeString("barkQuietStart")))
 	global.BarkQuietEnd = globalStringPtr(strings.TrimSpace(s.getEscapeString("barkQuietEnd")))
 	global.HiddenMenus = filterHiddenMenus(s.hiddenMenusParam())
+	global.AutoRestartEnabled = globalBoolPtr(s.GetBoolNoErr("autoRestartEnabled"))
+	global.AutoRestartTime = globalStringPtr(strings.TrimSpace(s.getEscapeString("autoRestartTime")))
+	global.AutoRestartWeekdays = filterWeekdays(s.autoRestartWeekdaysParam())
 
 	if err := file.GetDb().SaveGlobal(global); err != nil {
 		s.AjaxErr(err.Error())
@@ -145,6 +151,67 @@ func (s *GlobalController) hiddenMenusParam() []string {
 	keys := s.GetStrings("hiddenMenus")
 	keys = append(keys, s.GetStrings("hiddenMenus[]")...)
 	return keys
+}
+
+// autoRestartWeekdaysParam 读取定时重启生效的星期列表。
+// 同 hiddenMenusParam，需要兼容 name 与 name[] 两种写法。
+func (s *GlobalController) autoRestartWeekdaysParam() []string {
+	values := s.GetStrings("autoRestartWeekdays")
+	values = append(values, s.GetStrings("autoRestartWeekdays[]")...)
+	return values
+}
+
+// filterWeekdays 只保留合法且去重后的星期（0-6）。
+func filterWeekdays(values []string) []int {
+	seen := make(map[int]bool, len(values))
+	result := make([]int, 0, len(values))
+	for _, v := range values {
+		day, err := strconv.Atoi(strings.TrimSpace(v))
+		if err != nil || day < 0 || day > 6 || seen[day] {
+			continue
+		}
+		seen[day] = true
+		result = append(result, day)
+	}
+	return result
+}
+
+// WeekdayOption 描述一个星期几的勾选项。
+type WeekdayOption struct {
+	// Value 是提交给后端的星期值（0=周日 … 6=周六）。
+	Value int
+	// Name 是 i18n 词条 key。
+	Name string
+	// Checked 表示当前是否已勾选。
+	Checked bool
+}
+
+// weekdayNames 是星期几的 i18n 词条，顺序为周日到周六。
+var weekdayNames = []string{
+	"word-weekday-sunday",
+	"word-weekday-monday",
+	"word-weekday-tuesday",
+	"word-weekday-wednesday",
+	"word-weekday-thursday",
+	"word-weekday-friday",
+	"word-weekday-saturday",
+}
+
+// weekdayOptionsWithState 返回带勾选状态的星期列表，供全局参数页渲染。
+func weekdayOptionsWithState(selected []int) []WeekdayOption {
+	state := make(map[int]bool, len(selected))
+	for _, day := range selected {
+		state[day] = true
+	}
+	options := make([]WeekdayOption, 0, len(weekdayNames))
+	for i, name := range weekdayNames {
+		options = append(options, WeekdayOption{
+			Value:   i,
+			Name:    name,
+			Checked: state[i],
+		})
+	}
+	return options
 }
 
 // diffBlackIpList 返回在 new 中但不在 old 中的 IP。

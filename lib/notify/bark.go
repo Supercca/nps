@@ -138,3 +138,12 @@ func NotifyBlackIpBatchAdded(ips []string, source string) {
 		len(ips), source, strings.Join(shown, ", "), suffix)
 	SendBark("NPS 黑名单新增 IP", body)
 }
+
+// NotifyScheduledRestart 通知「服务端即将定时重启」。
+// runAt 是计划的重启时刻，提醒在它之前若干分钟发出，
+// 让运维人员有时间知道面板与隧道即将短暂中断。
+func NotifyScheduledRestart(runAt time.Time) {
+	body := fmt.Sprintf("服务端将在 %s 自动重启\n重启期间面板与所有隧道会短暂中断",
+		runAt.Format("2006-01-02 15:04"))
+	SendBark("NPS 服务端定时重启", body)
+}

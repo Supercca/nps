@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"ehang.io/nps/bridge"
 	"ehang.io/nps/lib/daemon"
@@ -21,6 +22,8 @@ import (
 
 	"ehang.io/nps/lib/file"
 	"ehang.io/nps/lib/install"
+	"ehang.io/nps/lib/notify"
+	"ehang.io/nps/lib/restart"
 	"ehang.io/nps/lib/version"
 	"ehang.io/nps/server/connection"
 	"ehang.io/nps/server/tool"
@@ -531,6 +534,42 @@ func (p *nps) run() error {
 	return nil
 }
 
+// startAutoRestartScheduler 启动定时重启调度器。
+//
+// 配置来自全局参数（热更新），因此用户在 Web 后台改完立即生效。
+// 到点前 5 分钟推送 Bark 提醒，到点执行重启：先把内存中的 JSON 数据落盘一次，
+// 再复用 Web 面板「重启服务」的同一套重启逻辑。
+func startAutoRestartScheduler() {
+	scheduler := restart.NewScheduler(
+		func() restart.Schedule {
+			settings := file.GetDb().GetGlobalSettings()
+			schedule, ok := restart.ParseSchedule(settings.AutoRestartEnabled,
+				settings.AutoRestartTime, settings.AutoRestartWeekdays)
+			if !ok {
+				return restart.Schedule{}
+			}
+			return schedule
+		},
+		func(runAt time.Time) {
+			logs.Info("定时重启将在 %s 执行，提前 5 分钟提醒", runAt.Format("2006-01-02 15:04"))
+			notify.NotifyScheduledRestart(runAt)
+		},
+		func(runAt time.Time) {
+			logs.Info("定时重启开始执行：%s", runAt.Format("2006-01-02 15:04"))
+			// 重启前把内存中的 JSON 数据落盘一次，
+			// 避免 flowSession 周期性持久化间隔内的流量统计丢失。
+			file.GetDb().JsonDb.StoreHostToJsonFile()
+			file.GetDb().JsonDb.StoreTasksToJsonFile()
+			file.GetDb().JsonDb.StoreClientsToJsonFile()
+			file.GetDb().JsonDb.StoreGlobalToJsonFile()
+			if err := restart.Do(); err != nil {
+				logs.Error("定时重启失败:", err)
+			}
+		},
+	)
+	scheduler.Start()
+}
+
 func run() {
 	routers.Init()
 	task := &file.Tunnel{
@@ -554,6 +593,8 @@ func run() {
 		timeout = 60
 	}
 	go server.StartNewServer(bridgePort, task, beego.AppConfig.String("bridge_type"), timeout)
+	// 启动定时重启调度器（配置来自全局参数，可热更新）。
+	startAutoRestartScheduler()
 }
 
 func initConfig(confDir string) {

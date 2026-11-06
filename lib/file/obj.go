@@ -282,6 +282,13 @@ type Glob struct {
 	// HiddenMenus 是左侧导航需要隐藏的菜单项 key 列表。
 	// 可选值：index/client/host/tcp/udp/http/socks5/secret/p2p/file/global/help。
 	HiddenMenus []string `json:"HiddenMenus,omitempty"`
+	// AutoRestartEnabled 为 true 时启用定时重启服务端进程。
+	AutoRestartEnabled *bool `json:"AutoRestartEnabled,omitempty"`
+	// AutoRestartTime 是定时重启的时刻，格式 HH:MM（24 小时制），如 04:00。
+	AutoRestartTime *string `json:"AutoRestartTime,omitempty"`
+	// AutoRestartWeekdays 是定时重启生效的星期，取值 0-6（周日=0，周六=6）。
+	// 为空表示每天都重启。
+	AutoRestartWeekdays []int `json:"AutoRestartWeekdays,omitempty"`
 
 	sync.RWMutex
 }

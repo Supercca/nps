@@ -38,6 +38,12 @@ type GlobalSettings struct {
 	BarkQuietEnd   string
 	// HiddenMenus 是左侧导航需要隐藏的菜单项 key 列表。
 	HiddenMenus []string
+	// AutoRestartEnabled 为 true 时启用定时重启服务端进程。
+	AutoRestartEnabled bool
+	// AutoRestartTime 是定时重启的时刻，格式 HH:MM。为空表示未配置。
+	AutoRestartTime string
+	// AutoRestartWeekdays 是定时重启生效的星期（0=周日，6=周六），为空表示每天。
+	AutoRestartWeekdays []int
 }
 
 // MaxGlobalBlackIpCount 是全局黑名单的最大条目数。
@@ -165,6 +171,11 @@ func (s *DbUtils) GetGlobalSettings() GlobalSettings {
 	if len(global.HiddenMenus) > 0 {
 		settings.HiddenMenus = append([]string(nil), global.HiddenMenus...)
 	}
+	settings.AutoRestartEnabled = boolPtrValue(global.AutoRestartEnabled)
+	settings.AutoRestartTime = stringPtrValue(global.AutoRestartTime)
+	if len(global.AutoRestartWeekdays) > 0 {
+		settings.AutoRestartWeekdays = append([]int(nil), global.AutoRestartWeekdays...)
+	}
 	return settings
 }
 
@@ -280,6 +291,15 @@ func (s *DbUtils) MigrateGlobalFromAppConfig() {
 		global.BarkQuietEnd = stringPtr(beego.AppConfig.String("bark_quiet_end"))
 		changed = true
 	}
+	if global.AutoRestartEnabled == nil {
+		global.AutoRestartEnabled = boolPtr(appConfigBool("auto_restart_enabled", false))
+		changed = true
+	}
+	if global.AutoRestartTime == nil {
+		global.AutoRestartTime = stringPtr(beego.AppConfig.String("auto_restart_time"))
+		changed = true
+	}
+	// AutoRestartWeekdays 为空即「每天」，无需迁移。
 
 	if changed {
 		_ = s.SaveGlobal(global)

@@ -482,6 +482,58 @@
 		<zh-CN>重启 nps 服务端进程，使 nps.conf 等启动级配置生效。重启期间面板与所有隧道会短暂中断，完成后页面自动恢复。</zh-CN>
 		<en-US>Restart the nps server process to apply startup-level settings in nps.conf. The panel and all tunnels will be briefly unavailable, the page reloads automatically when the service is back.</en-US>
 	</lang>
+	<lang id="word-autorestart">
+		<zh-CN>定时重启服务</zh-CN>
+		<en-US>Scheduled Restart</en-US>
+	</lang>
+	<lang id="info-autorestarttips">
+		<zh-CN>开启后，服务端将在设定的时刻自动重启。重启前 5 分钟会通过 Bark 推送提醒。重启期间面板与所有隧道会短暂中断。</zh-CN>
+		<en-US>When enabled, the server restarts automatically at the configured time. A Bark notification is pushed 5 minutes before the restart. The panel and all tunnels will be briefly unavailable during the restart.</en-US>
+	</lang>
+	<lang id="word-autorestarttime">
+		<zh-CN>重启时刻</zh-CN>
+		<en-US>Restart Time</en-US>
+	</lang>
+	<lang id="info-autorestarttimetimeps">
+		<zh-CN>24 小时制时刻，格式 HH:MM，例如 04:00。留空则不启用定时重启。</zh-CN>
+		<en-US>24-hour clock time in HH:MM format, e.g. 04:00. Leave empty to disable the scheduled restart.</en-US>
+	</lang>
+	<lang id="word-autorestartweekdays">
+		<zh-CN>执行日</zh-CN>
+		<en-US>Days</en-US>
+	</lang>
+	<lang id="info-autorestartweekdaystips">
+		<zh-CN>不勾选任何一天表示每天都执行。</zh-CN>
+		<en-US>Leave all days unchecked to run every day.</en-US>
+	</lang>
+	<lang id="word-weekday-sunday">
+		<zh-CN>周日</zh-CN>
+		<en-US>Sunday</en-US>
+	</lang>
+	<lang id="word-weekday-monday">
+		<zh-CN>周一</zh-CN>
+		<en-US>Monday</en-US>
+	</lang>
+	<lang id="word-weekday-tuesday">
+		<zh-CN>周二</zh-CN>
+		<en-US>Tuesday</en-US>
+	</lang>
+	<lang id="word-weekday-wednesday">
+		<zh-CN>周三</zh-CN>
+		<en-US>Wednesday</en-US>
+	</lang>
+	<lang id="word-weekday-thursday">
+		<zh-CN>周四</zh-CN>
+		<en-US>Thursday</en-US>
+	</lang>
+	<lang id="word-weekday-friday">
+		<zh-CN>周五</zh-CN>
+		<en-US>Friday</en-US>
+	</lang>
+	<lang id="word-weekday-saturday">
+		<zh-CN>周六</zh-CN>
+		<en-US>Saturday</en-US>
+	</lang>
 	<lang id="word-save">
 		<zh-CN>保存</zh-CN>
 		<en-US>Save</en-US>
