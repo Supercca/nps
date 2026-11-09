@@ -27,10 +27,12 @@ html.dark-theme #page-wrapper {
     color: #c9d1d9;
 }
 
+html.dark-theme .navbar-static-top,
+html.dark-theme .navbar-fixed-top,
 html.dark-theme .white-bg,
 html.dark-theme .white-bg .navbar-fixed-top,
 html.dark-theme .white-bg .navbar-static-top {
-    background-color: #21262d;
+    background-color: #1b1f24;
     color: #c9d1d9;
 }
 
