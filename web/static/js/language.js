@@ -130,6 +130,10 @@
 				charts[key] = echarts.init(document.getElementById(key));
 				charts[key].setOption(chartdatas[key], true);
 			}
+			// 图表重建后按当前主题（暗色/亮色）重新着色
+			if (window.npsTheme && window.npsTheme.applyChartTheme) {
+				window.npsTheme.applyChartTheme();
+			}
 		}
 	}
 

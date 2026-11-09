@@ -534,6 +534,10 @@
 		<zh-CN>周六</zh-CN>
 		<en-US>Saturday</en-US>
 	</lang>
+	<lang id="word-themeswitch">
+		<zh-CN>切换深色/浅色主题</zh-CN>
+		<en-US>Toggle dark / light theme</en-US>
+	</lang>
 	<lang id="word-save">
 		<zh-CN>保存</zh-CN>
 		<en-US>Save</en-US>

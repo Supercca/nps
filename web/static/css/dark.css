@@ -1,0 +1,424 @@
+/*
+ * NPS 暗色主题
+ *
+ * 约定：
+ *   - 所有覆盖规则都以 html.dark-theme 为前缀，作用域限定在暗色模式下，不影响亮色主题。
+ *   - 左侧导航（.navbar-static-side / .nav-header）本身已是深色，无需覆盖。
+ *   - 主题切换由 web/static/js/theme.js 负责（写入 html.dark-theme class）。
+ */
+
+html.dark-theme {
+    color-scheme: dark;
+    /* 统一色板，供页面内联样式之外的场景引用 */
+    --nps-dark-bg: #1b1f24;
+    --nps-dark-panel: #21262d;
+    --nps-dark-panel-head: #262c33;
+    --nps-dark-border: #30363d;
+    --nps-dark-text: #c9d1d9;
+    --nps-dark-text-muted: #8b949e;
+}
+
+/* 页面底色与顶栏 */
+html.dark-theme body,
+html.dark-theme .gray-bg,
+html.dark-theme .bg-muted,
+html.dark-theme #page-wrapper {
+    background-color: #1b1f24;
+    color: #c9d1d9;
+}
+
+html.dark-theme .white-bg,
+html.dark-theme .white-bg .navbar-fixed-top,
+html.dark-theme .white-bg .navbar-static-top {
+    background-color: #21262d;
+    color: #c9d1d9;
+}
+
+html.dark-theme .navbar-default {
+    border-color: #30363d;
+}
+
+html.dark-theme .nav.navbar-right > li > a,
+html.dark-theme .navbar-top-links li a,
+html.dark-theme .welcome-message {
+    color: #8b949e;
+}
+
+html.dark-theme .nav.navbar-right > li > a:hover,
+html.dark-theme .nav.navbar-right > li > a:focus {
+    color: #c9d1d9;
+}
+
+/* 边框 */
+html.dark-theme .border-bottom,
+html.dark-theme .border-top,
+html.dark-theme .border-left-right,
+html.dark-theme .border-left,
+html.dark-theme .border-right,
+html.dark-theme hr {
+    border-color: #30363d !important;
+}
+
+/* 卡片（ibox） */
+html.dark-theme .ibox,
+html.dark-theme .ibox-title,
+html.dark-theme .ibox-content,
+html.dark-theme .ibox-footer,
+html.dark-theme .ibox-heading {
+    background-color: #21262d;
+    border-color: #30363d;
+    color: #c9d1d9;
+}
+
+html.dark-theme .ibox-heading {
+    background-color: #262c33;
+}
+
+html.dark-theme .ibox-title h5,
+html.dark-theme .ibox-title h3,
+html.dark-theme .ibox-content h1,
+html.dark-theme .ibox-content h2,
+html.dark-theme .ibox-content h3 {
+    color: #e6edf3;
+}
+
+html.dark-theme .ibox-tools a,
+html.dark-theme .ibox-tools a:focus,
+html.dark-theme .ibox-tools a:hover {
+    color: #8b949e !important;
+}
+
+html.dark-theme .ibox-tools .dropdown-menu > li > a {
+    color: #c9d1d9 !important;
+}
+
+html.dark-theme .ibox-content.text-box {
+    color: #c9d1d9;
+}
+
+/* 文字 */
+html.dark-theme .text-muted,
+html.dark-theme .text-muted a {
+    color: #8b949e !important;
+}
+
+html.dark-theme .footer,
+html.dark-theme .footer.fixed,
+html.dark-theme .footer.fixed_full {
+    background: #21262d;
+    border-top-color: #30363d;
+    color: #8b949e;
+}
+
+html.dark-theme .footer a {
+    color: #58a6ff;
+}
+
+/* 表格 */
+html.dark-theme .table,
+html.dark-theme .table > thead > tr > th,
+html.dark-theme .table > tbody > tr > td,
+html.dark-theme .table > tbody > tr > th,
+html.dark-theme .table > tfoot > tr > td,
+html.dark-theme .table > tfoot > tr > th {
+    color: #c9d1d9;
+    border-color: #30363d;
+}
+
+html.dark-theme .table > thead > tr > th {
+    background-color: #262c33;
+    border-bottom-color: #30363d;
+}
+
+html.dark-theme .table-striped tbody tr:nth-of-type(odd),
+html.dark-theme .table-hover tbody tr:hover,
+html.dark-theme .bootstrap-table .fixed-table-container .table tbody tr.selected td {
+    background-color: rgba(255, 255, 255, .04);
+    color: #c9d1d9;
+}
+
+html.dark-theme .bootstrap-table .fixed-table-container .table tbody tr td {
+    background-color: transparent;
+}
+
+html.dark-theme .bootstrap-table .fixed-table-container .table thead th {
+    background-color: #262c33;
+    border-bottom-color: #30363d;
+}
+
+html.dark-theme .bootstrap-table .fixed-table-container .table thead th .th-inner {
+    color: #e6edf3;
+}
+
+html.dark-theme .bootstrap-table .fixed-table-container .fixed-table-body .fixed-table-loading {
+    background: #21262d;
+}
+
+html.dark-theme .bootstrap-table .fixed-table-container .table tbody tr.no-records-found td {
+    color: #8b949e;
+}
+
+/* bootstrap-table 工具栏与展开行 */
+html.dark-theme .bootstrap-table .fixed-table-toolbar,
+html.dark-theme .bootstrap-table .fixed-table-toolbar .search,
+html.dark-theme .bootstrap-table .fixed-table-toolbar .columns {
+    color: #c9d1d9;
+}
+
+html.dark-theme .bootstrap-table .fixed-table-toolbar .search .form-control,
+html.dark-theme .bootstrap-table .fixed-table-toolbar .columns .dropdown-menu {
+    background-color: #161b22;
+    border-color: #30363d;
+    color: #c9d1d9;
+}
+
+html.dark-theme .bootstrap-table .fixed-table-container .table .detail-view {
+    background-color: #161b22;
+    color: #c9d1d9;
+}
+
+/* 表单控件 */
+html.dark-theme .form-control,
+html.dark-theme .form-control:focus,
+html.dark-theme .form-control:disabled,
+html.dark-theme select.form-control,
+html.dark-theme input[type="text"],
+html.dark-theme input[type="password"],
+html.dark-theme input[type="email"],
+html.dark-theme input[type="number"],
+html.dark-theme input[type="search"],
+html.dark-theme input[type="tel"],
+html.dark-theme textarea.form-control,
+html.dark-theme .input-group-addon {
+    background-color: #161b22;
+    border-color: #30363d;
+    color: #c9d1d9;
+}
+
+html.dark-theme .form-control::placeholder,
+html.dark-theme textarea.form-control::placeholder {
+    color: #6e7681;
+}
+
+html.dark-theme .form-control:focus {
+    background-color: #161b22;
+    border-color: #1ab394;
+    color: #e6edf3;
+}
+
+html.dark-theme .form-control.is-invalid,
+html.dark-theme .has-error .form-control {
+    border-color: #ed5565;
+}
+
+html.dark-theme select.form-control option,
+html.dark-theme select option {
+    background-color: #161b22;
+    color: #c9d1d9;
+}
+
+html.dark-theme .checkbox label,
+html.dark-theme .radio label,
+html.dark-theme label {
+    color: #c9d1d9;
+}
+
+html.dark-theme .control-label {
+    color: #c9d1d9;
+}
+
+/* 按钮 */
+html.dark-theme .btn-default,
+html.dark-theme .btn-white,
+html.dark-theme .btn-outline {
+    background-color: #262c33;
+    border-color: #3d444d;
+    color: #c9d1d9;
+}
+
+html.dark-theme .btn-default:hover,
+html.dark-theme .btn-default:focus,
+html.dark-theme .btn-default:active,
+html.dark-theme .btn-white:hover,
+html.dark-theme .btn-white:focus,
+html.dark-theme .btn-white:active,
+html.dark-theme .btn-outline:hover,
+html.dark-theme .btn-outline:focus {
+    background-color: #30363d;
+    border-color: #4a515a;
+    color: #e6edf3;
+}
+
+html.dark-theme .btn-default.disabled,
+html.dark-theme .btn-default[disabled],
+html.dark-theme .btn-white.disabled,
+html.dark-theme .btn-white[disabled] {
+    background-color: #262c33;
+    border-color: #3d444d;
+    color: #6e7681;
+}
+
+/* 开关（onoffswitch）：OFF 态改为深色 */
+html.dark-theme .onoffswitch-inner:after {
+    background-color: #3d444d;
+    color: #8b949e;
+}
+
+html.dark-theme .onoffswitch-switch {
+    background: #e6edf3;
+}
+
+/* 下拉菜单 / 模态框 / 面板 */
+html.dark-theme .dropdown-menu,
+html.dark-theme .dropdown-menu > li > a,
+html.dark-theme .dropdown-item {
+    background-color: #21262d;
+    color: #c9d1d9;
+}
+
+html.dark-theme .dropdown-menu > li > a:hover,
+html.dark-theme .dropdown-menu > li > a:focus,
+html.dark-theme .dropdown-item:hover,
+html.dark-theme .dropdown-item:focus {
+    background-color: #30363d;
+    color: #e6edf3;
+}
+
+html.dark-theme .modal-content,
+html.dark-theme .modal-header,
+html.dark-theme .modal-footer,
+html.dark-theme .modal-body {
+    background-color: #21262d;
+    border-color: #30363d;
+    color: #c9d1d9;
+}
+
+html.dark-theme .modal-header .close {
+    color: #8b949e;
+    text-shadow: none;
+    opacity: .8;
+}
+
+html.dark-theme .panel,
+html.dark-theme .panel-default,
+html.dark-theme .panel-default > .panel-heading,
+html.dark-theme .panel-body {
+    background-color: #21262d;
+    border-color: #30363d;
+    color: #c9d1d9;
+}
+
+html.dark-theme .panel-default > .panel-heading {
+    color: #e6edf3;
+}
+
+/* 列表组 */
+html.dark-theme .list-group-item {
+    background-color: transparent;
+    border-color: #30363d;
+    color: #c9d1d9;
+}
+
+/* 分页 */
+html.dark-theme .pagination > li > a,
+html.dark-theme .pagination > li > span,
+html.dark-theme .page-link {
+    background-color: #21262d;
+    border-color: #30363d;
+    color: #c9d1d9;
+}
+
+html.dark-theme .pagination > li > a:hover,
+html.dark-theme .pagination > li > a:focus,
+html.dark-theme .page-link:hover {
+    background-color: #30363d;
+    border-color: #4a515a;
+    color: #e6edf3;
+}
+
+html.dark-theme .pagination > .active > a,
+html.dark-theme .pagination > .active > span,
+html.dark-theme .pagination > .active > a:hover,
+html.dark-theme .pagination > .active > span:hover {
+    background-color: #1ab394;
+    border-color: #1ab394;
+    color: #fff;
+}
+
+/* 进度条 */
+html.dark-theme .progress {
+    background-color: #161b22;
+}
+
+/* 代码块 */
+html.dark-theme code,
+html.dark-theme pre {
+    background-color: #161b22;
+    color: #c9d1d9;
+}
+
+/* 日期选择器（flatpickr） */
+html.dark-theme .flatpickr-calendar {
+    background: #21262d;
+    border-color: #30363d;
+    color: #c9d1d9;
+}
+
+html.dark-theme .flatpickr-calendar .flatpickr-months .flatpickr-month,
+html.dark-theme .flatpickr-calendar .flatpickr-weekdays,
+html.dark-theme .flatpickr-calendar span.flatpickr-weekday {
+    background: transparent;
+    color: #8b949e;
+}
+
+html.dark-theme .flatpickr-calendar .flatpickr-day {
+    color: #c9d1d9;
+}
+
+html.dark-theme .flatpickr-calendar .flatpickr-day:hover,
+html.dark-theme .flatpickr-calendar .flatpickr-day.selected,
+html.dark-theme .flatpickr-calendar .flatpickr-day.today,
+html.dark-theme .flatpickr-calendar .flatpickr-day.startRange,
+html.dark-theme .flatpickr-calendar .flatpickr-day.endRange {
+    background: #30363d;
+    border-color: #1ab394;
+    color: #e6edf3;
+}
+
+html.dark-theme .flatpickr-calendar .flatpickr-monthDropdown-months {
+    background: #21262d;
+    color: #c9d1d9;
+}
+
+/* 全局参数页（页面内联样式定义的类，这里做暗色覆盖） */
+html.dark-theme .global-param-page .setting-card {
+    background: #21262d;
+    border-color: #30363d;
+    box-shadow: none;
+}
+
+html.dark-theme .global-param-page .setting-card-head {
+    background: #262c33;
+    border-bottom-color: #30363d;
+    color: #e6edf3;
+}
+
+html.dark-theme .global-param-page .setting-row,
+html.dark-theme .global-param-page .setting-field {
+    border-bottom-color: #30363d;
+}
+
+html.dark-theme .global-param-page .setting-title,
+html.dark-theme .global-param-page .setting-field > label {
+    color: #e6edf3;
+}
+
+html.dark-theme .global-param-page .setting-desc,
+html.dark-theme .global-param-page .setting-field .help-block {
+    color: #8b949e;
+}
+
+/* 日志页终端区域本身已是深色，只需微调边框 */
+html.dark-theme #logConsole {
+    border: 1px solid #30363d;
+}
