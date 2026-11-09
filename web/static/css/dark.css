@@ -65,7 +65,7 @@ html.dark-theme hr {
    style.css 中这些位置硬编码了 #2f4050 / #293846（亮色下与深色侧栏同色），
    暗色主题下会形成突兀的亮块，这里统一改为深色调。 */
 html.dark-theme .nav-header {
-    background-color: #21262d;
+    background-color: #1b1f24;
     border-bottom: 1px solid #30363d;
 }
 
