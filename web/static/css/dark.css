@@ -59,6 +59,37 @@ html.dark-theme hr {
     border-color: #30363d !important;
 }
 
+/* 左侧导航：资料区 / 菜单区 / 选中态 / 二级菜单统一为暗色
+   style.css 中这些位置硬编码了 #2f4050 / #293846（亮色下与深色侧栏同色），
+   暗色主题下会形成突兀的亮块，这里统一改为深色调。 */
+html.dark-theme .nav-header {
+    background-color: #21262d;
+    border-bottom: 1px solid #30363d;
+}
+
+html.dark-theme .nav-header .text-muted {
+    color: #8b949e !important;
+}
+
+html.dark-theme .navbar-default .nav > li > a:hover,
+html.dark-theme .navbar-default .nav > li > a:focus {
+    background-color: #262c33;
+    color: #e6edf3;
+}
+
+html.dark-theme .nav > li.active {
+    background-color: #262c33;
+}
+
+html.dark-theme ul.nav-second-level {
+    background: #21262d;
+}
+
+/* 折叠成图标栏时资料区是品牌绿，这里保持绿色但与暗色协调 */
+html.dark-theme body.mini-navbar .nav-header {
+    background-color: #1ab394;
+}
+
 /* 卡片（ibox） */
 html.dark-theme .ibox,
 html.dark-theme .ibox-title,
