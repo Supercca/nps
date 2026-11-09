@@ -277,8 +277,38 @@ func (s *ClientController) ResetFlow() {
 		client.Flow = new(file.Flow)
 	}
 	client.Flow.Reset()
+
+	// 隧道（TCP/UDP）与域名（host）各自持有一份独立的 Flow 计数器，
+	// 数据转发时是分别累加的（见 lib/goroutine/pool.go CopyBuffer、
+	// server/proxy/udp.go、server/proxy/http.go），
+	// 因此只重置 client.Flow 会导致客户端详情页/隧道列表里仍显示旧的流量。
+	// 这里把该客户端名下的隧道级、域名级流量一并清零。
+	file.GetDb().JsonDb.Tasks.Range(func(key, value interface{}) bool {
+		v, ok := value.(*file.Tunnel)
+		if !ok || v == nil || v.Client == nil || v.Client.Id != client.Id {
+			return true
+		}
+		if v.Flow != nil {
+			v.Flow.Reset()
+		}
+		return true
+	})
+
+	file.GetDb().JsonDb.Hosts.Range(func(key, value interface{}) bool {
+		v, ok := value.(*file.Host)
+		if !ok || v == nil || v.Client == nil || v.Client.Id != client.Id {
+			return true
+		}
+		if v.Flow != nil {
+			v.Flow.Reset()
+		}
+		return true
+	})
+
 	// 立即落盘，保证重启后仍为 0。
 	file.GetDb().JsonDb.StoreClientsToJsonFile()
+	file.GetDb().JsonDb.StoreTasksToJsonFile()
+	file.GetDb().JsonDb.StoreHostToJsonFile()
 	s.AjaxOk("reset flow success")
 }
 
