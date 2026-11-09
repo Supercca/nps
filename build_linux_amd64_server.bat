@@ -6,11 +6,11 @@ rem ============================================================
 rem  Build NPS server release package for linux/amd64
 rem  Usage:
 rem     build_linux_amd64_server.bat            use default version
-rem     build_linux_amd64_server.bat 0.26.100    override version
+rem     build_linux_amd64_server.bat 0.26.101    override version
 rem  Output: linux_amd64_server.tar.gz
 rem ============================================================
 
-set "VERSION=0.26.100"
+set "VERSION=0.26.101"
 set "PKG=linux_amd64_server"
 rem PACK_CONF=0  ship the nps binary only, conf is generated on first run
 rem PACK_CONF=1  also ship conf/nps.conf and conf/global.json templates
