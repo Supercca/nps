@@ -21,6 +21,7 @@ func NewJsonDb(runPath string) *JsonDb {
 		HostFilePath:   filepath.Join(runPath, "conf", "hosts.json"),
 		ClientFilePath: filepath.Join(runPath, "conf", "clients.json"),
 		GlobalFilePath: filepath.Join(runPath, "conf", "global.json"),
+		blackIpSet:     make(map[string]struct{}),
 	}
 }
 
@@ -38,6 +39,32 @@ type JsonDb struct {
 	HostFilePath     string //host file path
 	ClientFilePath   string //client file path
 	GlobalFilePath   string //global file path
+
+	// blackIpLock 保护全局黑名单（列表 + 集合视图）的读写。
+	// 代理层每来一个连接都要查一次黑名单，查询走读锁，可以并发。
+	blackIpLock sync.RWMutex
+	// blackIpSet 是全局黑名单的集合视图，用于 O(1) 查找。
+	// 它由 lib/file 内部维护，必须与 Global.BlackIpList 保持一致：
+	// 任何替换黑名单的入口都要调用 rebuildBlackIpSet 重建。
+	blackIpSet map[string]struct{}
+	// globalPtrLock 保护 Global 指针本身的替换与读取。
+	// 保存全局参数（Web 保存、自动拉黑）与读取全局参数（每个连接）会并发发生，
+	// 不加锁可能读到撕裂的指针。
+	globalPtrLock sync.RWMutex
+}
+
+// getGlobal 返回当前全局配置指针。
+func (s *JsonDb) getGlobal() *Glob {
+	s.globalPtrLock.RLock()
+	defer s.globalPtrLock.RUnlock()
+	return s.Global
+}
+
+// setGlobal 替换全局配置指针。
+func (s *JsonDb) setGlobal(global *Glob) {
+	s.globalPtrLock.Lock()
+	s.Global = global
+	s.globalPtrLock.Unlock()
 }
 
 func (s *JsonDb) LoadTaskFromJsonFile() {
@@ -100,10 +127,11 @@ func (s *JsonDb) LoadGlobalFromJsonFile() {
 		if json.Unmarshal([]byte(v), &post) != nil {
 			return
 		}
-		s.Global = post
+		s.setGlobal(post)
 	})
-	// 从磁盘加载后同步刷新地区限制快照。
+	// 从磁盘加载后同步刷新地区限制快照与黑名单集合视图。
 	refreshRegionLimit(s.Global)
+	s.rebuildBlackIpSet(s.Global)
 }
 
 func (s *JsonDb) GetClient(id int) (c *Client, err error) {
@@ -143,7 +171,7 @@ var globalLock sync.Mutex
 
 func (s *JsonDb) StoreGlobalToJsonFile() {
 	globalLock.Lock()
-	storeGlobalToFile(s.Global, s.GlobalFilePath)
+	storeGlobalToFile(s.getGlobal(), s.GlobalFilePath)
 	globalLock.Unlock()
 }
 

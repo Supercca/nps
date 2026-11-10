@@ -129,17 +129,47 @@ func (s *DbUtils) GetRegionLimit() RegionLimit {
 	return RegionLimit{Mode: RegionLimitModeNone}
 }
 
-// globalBlackIpLock 保护全局黑名单的读写。
-// 代理层每来一个连接都要在黑名单里查找一次，而查找用的 in() 会先就地排序
-// 入参切片（sort.Strings）；不加锁的话并发连接会同时排序同一份切片，
-// 自动拉黑时更会与 append 并发，导致切片损坏。
-var globalBlackIpLock sync.Mutex
+// rebuildBlackIpSet 依据全局配置里的黑名单列表重建集合视图。
+//
+// 集合视图是查询路径（每个连接都要查一次）的依据，必须与 Global.BlackIpList 一致：
+// 任何替换黑名单的入口（加载磁盘数据、Web 保存、备份恢复）都要调用它。
+func (s *JsonDb) rebuildBlackIpSet(global *Glob) {
+	s.blackIpLock.Lock()
+	defer s.blackIpLock.Unlock()
+	s.rebuildBlackIpSetLocked(global)
+}
+
+// rebuildBlackIpSetLocked 重建集合视图，调用方必须持有写锁。
+func (s *JsonDb) rebuildBlackIpSetLocked(global *Glob) {
+	set := make(map[string]struct{})
+	if global != nil {
+		for _, ip := range global.BlackIpList {
+			set[ip] = struct{}{}
+		}
+	}
+	s.blackIpSet = set
+}
+
+// IsGlobalBlackIp 判断 ip 是否在全局黑名单内。
+//
+// 走的是 lib/file 内部维护的集合视图（map），一次查找即可，O(1)：
+// 不再像以前那样每个连接都复制整表 + 就地排序 + 二分查找，
+// 也就不会有「查找过程把共享切片就地排序」的数据竞争。
+func (s *DbUtils) IsGlobalBlackIp(ip string) bool {
+	if ip == "" {
+		return false
+	}
+	s.JsonDb.blackIpLock.RLock()
+	defer s.JsonDb.blackIpLock.RUnlock()
+	_, ok := s.JsonDb.blackIpSet[ip]
+	return ok
+}
 
 // GetGlobalBlackIpList 返回全局黑名单的副本。
 // 调用方拿到的是快照，不会与后台的自动拉黑产生数据竞争。
 func (s *DbUtils) GetGlobalBlackIpList() []string {
-	globalBlackIpLock.Lock()
-	defer globalBlackIpLock.Unlock()
+	s.JsonDb.blackIpLock.RLock()
+	defer s.JsonDb.blackIpLock.RUnlock()
 	global := s.GetGlobal()
 	if global == nil {
 		return nil
@@ -193,17 +223,16 @@ func (s *DbUtils) AddGlobalBlackIp(ip string) bool {
 		return false
 	}
 
-	globalBlackIpLock.Lock()
-	defer globalBlackIpLock.Unlock()
+	s.JsonDb.blackIpLock.Lock()
+	defer s.JsonDb.blackIpLock.Unlock()
 
 	global := s.GetGlobal()
 	if global == nil {
 		global = new(Glob)
 	}
-	for _, item := range global.BlackIpList {
-		if item == ip {
-			return false
-		}
+	// 去重直接查集合视图，O(1)，不用再线性扫整张列表。
+	if _, ok := s.JsonDb.blackIpSet[ip]; ok {
+		return false
 	}
 	if len(global.BlackIpList) >= MaxGlobalBlackIpCount {
 		return false
@@ -213,7 +242,8 @@ func (s *DbUtils) AddGlobalBlackIp(ip string) bool {
 		return false
 	}
 	global.BlackIpList = append(global.BlackIpList, ip)
-	s.JsonDb.Global = global
+	s.JsonDb.blackIpSet[ip] = struct{}{}
+	s.JsonDb.setGlobal(global)
 	s.JsonDb.StoreGlobalToJsonFile()
 	return true
 }
@@ -222,8 +252,8 @@ func (s *DbUtils) AddGlobalBlackIp(ip string) bool {
 // global 传入调用方当前持有的全局配置对象，保证黑名单与其他设置落在同一份数据上；
 // 落盘由调用方随后执行的 SaveGlobal 负责。
 func (s *DbUtils) SetGlobalBlackIpList(global *Glob, list []string) {
-	globalBlackIpLock.Lock()
-	defer globalBlackIpLock.Unlock()
+	s.JsonDb.blackIpLock.Lock()
+	defer s.JsonDb.blackIpLock.Unlock()
 	if global == nil {
 		global = s.GetGlobal()
 		if global == nil {
@@ -231,7 +261,9 @@ func (s *DbUtils) SetGlobalBlackIpList(global *Glob, list []string) {
 		}
 	}
 	global.BlackIpList = list
-	s.JsonDb.Global = global
+	s.JsonDb.setGlobal(global)
+	// 整体替换后要重建集合视图，否则查询路径看到的还是旧名单。
+	s.JsonDb.rebuildBlackIpSetLocked(global)
 }
 
 func boolPtrValue(v *bool) bool {

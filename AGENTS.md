@@ -106,12 +106,27 @@ Web 后台「全局参数 → 安全设置 → 境外 IP 自动加入黑名单�
     速率上限是为了防被扫描：每个新 IP 都要全量写一次 `global.json`，不限制会把磁盘写满。
   - `GetGlobalBlackIpList() []string` — 返回黑名单**副本**。
   - `SetGlobalBlackIpList(global, list)` — Web 后台保存时整体替换。
-- **并发约束（重要）**：`server/proxy/base.go:in()` 与 `lib/common/util.go:in()` 都是
-  「先 `sort.Strings` 再二分查找」，会**就地排序入参切片**。因此全局黑名单的
-  所有读写都必须走 `lib/file/global.go` 的 `globalBlackIpLock`，且查找时只能传副本，
-  否则并发连接会同时排序/追加同一份切片（数据竞争，甚至切片损坏）。
-  客户端级黑名单 `client.BlackIpList` 仍由 `common.IsBlackIp` 直接排序共享切片，
-  是遗留问题，不在自动拉黑的影响范围内。
+  - `IsGlobalBlackIp(ip) bool` — 查询入口，O(1)。
+- **全局黑名单的并发约束（重要）**：全局黑名单在 `lib/file` 里由两样东西共同表示：
+  - 列表 `Global.BlackIpList` —— 落盘用，顺序即 Web 页面里的显示顺序；
+  - 集合视图 `JsonDb.blackIpSet` —— 查询用，O(1) 的 map。
+
+  两者由 `JsonDb.blackIpLock`（RWMutex）保护，**必须始终保持一致**：
+  任何替换黑名单的入口都要调用 `rebuildBlackIpSet` 重建集合视图——
+  `SaveGlobal`（Web 保存）、`LoadGlobalFromJsonFile`（启动 / 备份恢复）、
+  `SetGlobalBlackIpList`（Web 整体替换）、`AddGlobalBlackIp`（自动拉黑，增量维护）。
+  查询入口 `DbUtils.IsGlobalBlackIp(ip)` 在读锁下做一次 map 查找即可，多个连接可并发查。
+- **查询路径已改成 O(1)**：改造前每个连接都要复制整张列表 + `sort.Strings` + 二分查找，
+  1 万条黑名单时实测约 **0.9ms/次**（`BenchmarkIsGlobalBlackIpLegacy`），
+  现在约 **21ns/次**（`BenchmarkIsGlobalBlackIp`），差 4 万倍。
+  **不要再把查询改回「复制 + 排序 + 二分」**，也不要把共享切片传给会就地排序它的函数。
+- **`Global` 指针本身也加了锁**：`JsonDb.globalPtrLock` 保护 `JsonDb.Global` 指针的替换与读取。
+  保存全局参数（Web 保存、自动拉黑）与读取全局参数（每个连接）会并发发生，
+  不加锁会读到撕裂的指针。读写一律走 `JsonDb.getGlobal()` / `JsonDb.setGlobal()`。
+- **遗留问题**：`lib/common/util.go:in()` 仍然会就地排序入参切片，
+  客户端级黑名单 `client.BlackIpList` 与 IP 白名单 `client.IpWhiteList`
+  由 `common.IsBlackIp` / `common.IsAuthIp` 直接排序共享切片，是遗留的数据竞争，
+  不在自动拉黑的影响范围内。
 
 ### 拦截日志限流（`server/proxy/blocklog.go`）
 

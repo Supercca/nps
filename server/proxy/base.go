@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net"
 	"net/http"
-	"sort"
 	"sync"
 
 	"ehang.io/nps/bridge"
@@ -96,15 +95,6 @@ func (s *BaseServer) CheckFlowAndConnNum(client *file.Client) error {
 	return nil
 }
 
-func in(target string, str_array []string) bool {
-	sort.Strings(str_array)
-	index := sort.SearchStrings(str_array, target)
-	if index < len(str_array) && str_array[index] == target {
-		return true
-	}
-	return false
-}
-
 // create a new connection and start bytes copying
 func (s *BaseServer) DealClient(c *conn.Conn, client *file.Client, addr string,
 	rb []byte, tp string, f func(), flow *file.Flow, localProxy bool, task *file.Tunnel, host *file.Host) error {
@@ -148,11 +138,10 @@ func (s *BaseServer) DealClient(c *conn.Conn, client *file.Client, addr string,
 
 // 判断访问地址是否在全局黑名单内
 func IsGlobalBlackIp(ipPort string) bool {
-	// 判断访问地址是否在全局黑名单内
 	ip := common.GetIpByAddr(ipPort)
-	// 传入副本：in() 会先就地排序入参切片，直接传共享切片会造成数据竞争。
-	list := file.GetDb().GetGlobalBlackIpList()
-	if in(ip, list) {
+	// 走 lib/file 内部维护的集合视图，O(1) 查找：
+	// 不再复制整表 + 就地排序 + 二分，也就没有「查找时排序共享切片」的数据竞争。
+	if file.GetDb().IsGlobalBlackIp(ip) {
 		// 命中黑名单是「预期内」的拒绝，日志要限流，否则被扫时日志会被刷爆。
 		blockLogLimiter.LogError("blacklist:"+ip, "IP地址["+ip+"]在全局黑名单列表内")
 		return true

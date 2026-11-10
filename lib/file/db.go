@@ -130,10 +130,12 @@ func (s *DbUtils) UpdateTask(t *Tunnel) error {
 }
 
 func (s *DbUtils) SaveGlobal(t *Glob) error {
-	s.JsonDb.Global = t
+	s.JsonDb.setGlobal(t)
 	s.JsonDb.StoreGlobalToJsonFile()
 	// 重建地区限制快照，保存后新的限制立即对流量生效。
 	refreshRegionLimit(t)
+	// 同步黑名单的集合视图，保证查询路径看到的名单与配置一致。
+	s.JsonDb.rebuildBlackIpSet(t)
 	return nil
 }
 
@@ -438,7 +440,7 @@ func (s *DbUtils) GetClient(id int) (c *Client, err error) {
 }
 
 func (s *DbUtils) GetGlobal() (c *Glob) {
-	return s.JsonDb.Global
+	return s.JsonDb.getGlobal()
 }
 
 func (s *DbUtils) GetClientIdByVkey(vkey string) (id int, err error) {
