@@ -88,8 +88,10 @@ if "%PACK_CONF%"=="1" (
     echo [5/7] conf not included, first run of .\nps.exe generates it with random secrets
 )
 
-rem 访问地区限制用的 ip2region IP 库总是随包发布（不含敏感信息），
-rem 缺失时「仅允许指定省份访问」不可用，但可在后台上传补上。
+rem The ip2region IP database used by the region access limit is always shipped
+rem with the package (it holds no secrets). When it is missing, the
+rem "only allow selected provinces" mode is unavailable, but it can be
+rem uploaded later from the web admin.
 if exist "conf\ip2region_v4.xdb" (
     mkdir "%STAGE%\conf" 2>nul
     copy /y "conf\ip2region_v4.xdb" "%STAGE%\conf\" >nul
@@ -155,7 +157,9 @@ for %%A in ("%OUT%") do if %%~zA LSS 1024 (
 rem ---------- 7/7 verify ----------
 echo [7/7] archive content:
 if defined GNUTAR (
-    "%GNUTAR%" --force-local -tvf "%OUT%"
+    rem GNU tar spawns gzip from PATH, which is not always available in cmd.exe,
+    rem so decompress with the bundled gzip.exe and pipe the tar stream into it.
+    "%GZIPEXE%" -dc "%OUT%" | "%GNUTAR%" --force-local -tvf -
     if errorlevel 1 (
         echo       GNU tar cannot read the gzip archive, retry with system tar
         tar -tvf "%OUT%"

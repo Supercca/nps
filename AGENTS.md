@@ -18,6 +18,11 @@
 | `lib/` | `nps_mux` 多路复用 · `pmux` 端口复用 · `conn` 连接封装/加密/压缩/限速 · `crypt` TLS+摘要 · `file` 数据模型与 JSON 持久化 · `config` 客户端 INI 解析 · `rate` 限速 · `cache` LRU · `goroutine` 协程池 · `install` `daemon` `common` |
 | `web/` | Beego 管理面板：`controllers/` `routers/` `views/` `static/`（静态资源经 embed 打包） |
 
+> **打包脚本约束（重要）**：`build_windows_amd64_server.bat` / `build_linux_amd64_server.bat` / `build.sh`
+> 里的注释**只能用 ASCII 英文**。cmd.exe 按系统 ANSI 代码页（中文 Windows 是 GBK）解析批处理，
+> UTF-8 中文注释会被拆成乱码字节，打断脚本解析，整个脚本直接跑不起来。
+> 改这两个 bat 脚本时，用英文写注释，不要写中文。
+
 ## 连接与转发流程
 
 **握手**（`bridge/bridge.go:cliProcess` → `client/control.go:NewConn`）：
