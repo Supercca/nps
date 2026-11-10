@@ -105,8 +105,15 @@ func main() {
 		}
 	}
 
+	// 加载「访问地区限制 → 仅允许指定省份」用的 IP 库（conf/ip2region_v4.xdb）。
+	// 库文件独立于二进制，可通过后台上传更新；缺失时只有省份模式不可用。
+	if err := file.GetDb().LoadProvinceDb(); err != nil {
+		logs.Warn("加载 IP 库失败，「仅允许指定省份访问」模式暂不可用:", err.Error())
+	}
+
 	// init service
 	options := make(service.KeyValue)
+
 	svcConfig := &service.Config{
 		Name:        "Nps",
 		DisplayName: "nps内网穿透代理服务器",

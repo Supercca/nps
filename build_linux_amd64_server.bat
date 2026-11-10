@@ -6,11 +6,11 @@ rem ============================================================
 rem  Build NPS server release package for linux/amd64
 rem  Usage:
 rem     build_linux_amd64_server.bat            use default version
-rem     build_linux_amd64_server.bat 0.26.104    override version
+rem     build_linux_amd64_server.bat 0.26.105    override version
 rem  Output: linux_amd64_server.tar.gz
 rem ============================================================
 
-set "VERSION=0.26.104"
+set "VERSION=0.26.105"
 set "PKG=linux_amd64_server"
 rem PACK_CONF=0  ship the nps binary only, conf is generated on first run
 rem PACK_CONF=1  also ship conf/nps.conf and conf/global.json templates
@@ -88,6 +88,16 @@ if "%PACK_CONF%"=="1" (
     echo [5/7] conf not included, first run of .\nps generates it with random secrets
 )
 
+rem 访问地区限制用的 ip2region IP 库总是随包发布（不含敏感信息），
+rem 缺失时「仅允许指定省份访问」不可用，但可在后台上传补上。
+if exist "conf\ip2region_v4.xdb" (
+    mkdir "%STAGE%\conf" 2>nul
+    copy /y "conf\ip2region_v4.xdb" "%STAGE%\conf\" >nul
+    echo [5/7] ip2region IP database included
+) else (
+    echo [5/7] WARNING: conf\ip2region_v4.xdb not found, province access control unavailable
+)
+
 rem ---------- 6/7 find GNU tar ----------
 for /f "delims=" %%G in ('where git 2^>nul') do call :probe_git "%%~dpG"
 for /f "delims=" %%T in ('where tar 2^>nul') do call :probe_tar "%%T"
@@ -98,6 +108,7 @@ if defined GNUTAR (
     echo [6/7] packaging with GNU tar, unix permissions preserved
     pushd "%STAGE%"
     if exist "conf\nps.conf" "%GNUTAR%" --mode=644 --owner=0 --group=0 --numeric-owner --force-local -cf "%TMPTAR%" conf/nps.conf conf/global.json
+    if exist "conf\ip2region_v4.xdb" "%GNUTAR%" --mode=644 --owner=0 --group=0 --numeric-owner --force-local -rf "%TMPTAR%" conf/ip2region_v4.xdb
     "%GNUTAR%" --mode=755 --owner=0 --group=0 --numeric-owner --force-local -rf "%TMPTAR%" nps
     if errorlevel 1 (
         popd

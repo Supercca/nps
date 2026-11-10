@@ -360,7 +360,7 @@ func splitBackupRecords(content []byte) [][]byte {
 
 // writeFileAtomic 先写临时文件再改名，避免写到一半被读到。
 func writeFileAtomic(path string, content []byte) error {
-	tmp := path + ".restore.tmp"
+	tmp := path + ".tmp"
 	if err := os.WriteFile(tmp, content, 0644); err != nil {
 		return err
 	}

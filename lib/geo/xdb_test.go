@@ -2,15 +2,29 @@ package geo
 
 import (
 	"net"
+	"os"
 	"testing"
 )
 
+// testXDBPath 是仓库内的 IP 库路径。
+// 测试运行时的工作目录是包目录（lib/geo），因此要往上两级。
+const testXDBPath = "../../conf/ip2region_v4.xdb"
+
+// loadTestProvinceIndex 加载测试用 IP 库。
+func loadTestProvinceIndex(t *testing.T) {
+	t.Helper()
+	if _, err := os.Stat(testXDBPath); err != nil {
+		t.Skipf("测试用 IP 库不存在: %s", err)
+	}
+	if err := LoadProvinceIndex(testXDBPath); err != nil {
+		t.Fatalf("加载 IP 库失败: %s", err)
+	}
+}
+
 // TestProvinceIndex 校验 IP 库能被正确解析，并且几个典型 IP 能落到正确省份。
 func TestProvinceIndex(t *testing.T) {
-	ready, reason := ProvinceDBReady()
-	if !ready {
-		t.Fatalf("IP 库不可用: %s", reason)
-	}
+	loadTestProvinceIndex(t)
+
 	if ProvinceRangeCount() == 0 {
 		t.Fatal("省份区间为空")
 	}
@@ -41,6 +55,35 @@ func TestProvinceIndex(t *testing.T) {
 	// IPv6 不在库覆盖范围内。
 	if got := LookupProvince(net.ParseIP("2400:3200::1")); got != "" {
 		t.Errorf("LookupProvince(IPv6) = %q, 期望空串", got)
+	}
+}
+
+// TestProvinceDBStatus 校验状态信息能正确反映已加载的库。
+func TestProvinceDBStatus(t *testing.T) {
+	loadTestProvinceIndex(t)
+
+	status := ProvinceDBStatus()
+	if !status.Ready {
+		t.Fatal("状态应为已加载")
+	}
+	if status.ProvinceCount != 34 {
+		t.Errorf("省份数 = %d, 期望 34", status.ProvinceCount)
+	}
+	if status.RangeCount == 0 {
+		t.Error("IP 区间数不应为 0")
+	}
+	if status.Path == "" {
+		t.Error("状态里应带上库文件路径")
+	}
+}
+
+// TestParseProvinceIndexInvalid 校验非法文件会被拒绝（上传前的校验）。
+func TestParseProvinceIndexInvalid(t *testing.T) {
+	if _, err := ParseProvinceIndex([]byte("not an xdb file")); err == nil {
+		t.Error("非法内容应解析失败")
+	}
+	if _, err := ParseProvinceIndex(nil); err == nil {
+		t.Error("空内容应解析失败")
 	}
 }
 

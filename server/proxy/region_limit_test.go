@@ -1,10 +1,28 @@
 package proxy
 
 import (
+	"os"
 	"testing"
 
 	"ehang.io/nps/lib/file"
+	"ehang.io/nps/lib/geo"
 )
+
+// testProvinceDbPath 是仓库内的 IP 库路径。
+// 测试运行时的工作目录是包目录（server/proxy），因此要往上两级。
+const testProvinceDbPath = "../../conf/ip2region_v4.xdb"
+
+// loadTestProvinceDb 加载测试用 IP 库。
+// 省份模式下判定依赖已加载的 IP 库，测试里要显式加载。
+func loadTestProvinceDb(t *testing.T) {
+	t.Helper()
+	if _, err := os.Stat(testProvinceDbPath); err != nil {
+		t.Skipf("测试用 IP 库不存在: %s", err)
+	}
+	if err := geo.LoadProvinceIndex(testProvinceDbPath); err != nil {
+		t.Fatalf("加载 IP 库失败: %s", err)
+	}
+}
 
 // setRegionLimit 设置「访问地区限制」的模式与允许访问的省份。
 func setRegionLimit(t *testing.T, mode int, provinces []string) {
@@ -46,6 +64,7 @@ func TestRegionLimitDisabled(t *testing.T) {
 // TestRegionLimitProvinces 省份模式下，只有允许省份的 IP 才能通过。
 func TestRegionLimitProvinces(t *testing.T) {
 	setupForeignIpTestConf(t)
+	loadTestProvinceDb(t)
 	setRegionLimit(t, file.RegionLimitModeAllowProvinces, []string{"广东", "浙江"})
 
 	cases := []struct {
@@ -71,6 +90,7 @@ func TestRegionLimitProvinces(t *testing.T) {
 // TestRegionLimitProvincesEmpty 未勾选任何省份时，公网访问一律拦截。
 func TestRegionLimitProvincesEmpty(t *testing.T) {
 	setupForeignIpTestConf(t)
+	loadTestProvinceDb(t)
 	setRegionLimit(t, file.RegionLimitModeAllowProvinces, nil)
 
 	if !IsRegionRestricted("202.96.128.86:80") {

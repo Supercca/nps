@@ -53,9 +53,12 @@ func (s *GlobalController) Index() {
 	s.Data["autoBlockForeignIp"] = settings.AutoBlockForeignIp
 	s.Data["regionLimitMode"] = settings.RegionLimitMode
 	s.Data["provinceGroups"] = provinceOptionsWithState(settings.AllowedProvinces)
-	provinceDbReady, provinceDbReason := geo.ProvinceDBReady()
-	s.Data["provinceDbReady"] = provinceDbReady
-	s.Data["provinceDbReason"] = provinceDbReason
+	provinceDb := geo.ProvinceDBStatus()
+	if provinceDb.Path == "" {
+		// 库尚未加载时也要把预期路径展示出来，方便用户知道该把文件放哪。
+		provinceDb.Path = file.GetDb().JsonDb.ProvinceDbPath()
+	}
+	s.Data["provinceDb"] = provinceDb
 	s.Data["barkEnabled"] = settings.BarkEnabled
 	s.Data["barkUrl"] = settings.BarkUrl
 	s.Data["barkQuietStart"] = settings.BarkQuietStart
@@ -173,10 +176,15 @@ const maxBackupUploadSize = 32 << 20
 // 备份包里含有全部客户端的 vkey 与 Web 登录口令，且恢复会整体覆盖业务数据，
 // 因此这两个接口必须只对管理员开放。
 func (s *GlobalController) backupAdminOnly() bool {
+	return s.adminOnly("only admin can backup data")
+}
+
+// adminOnly 校验管理员身份，denyMsg 是被拒绝时返回的提示语。
+func (s *GlobalController) adminOnly(denyMsg string) bool {
 	if isAdmin, ok := s.GetSession("isAdmin").(bool); ok && isAdmin {
 		return true
 	}
-	s.AjaxErr("only admin can backup data")
+	s.AjaxErr(denyMsg)
 	return false
 }
 
@@ -262,6 +270,72 @@ func (s *GlobalController) Restore() {
 		"hosts":      result.HostCount,
 		"createdAt":  result.Manifest.CreatedAt,
 		"npsVersion": result.Manifest.NPSVersion,
+	}
+	s.ServeJSON()
+	s.StopRun()
+}
+
+// maxProvinceDbUploadSize 是允许上传的 IP 库大小上限（字节）。
+//
+// 官方 ip2region v4 库约 10.6MB，这里留足余量给后续版本。
+const maxProvinceDbUploadSize = 128 << 20
+
+// provinceUploadFail 统一返回 IP 库上传失败的结果。
+func (s *GlobalController) provinceUploadFail(detail string) {
+	s.Data["json"] = map[string]interface{}{
+		"status": 0,
+		"msg":    "province database upload failed",
+		"detail": detail,
+	}
+	s.ServeJSON()
+	s.StopRun()
+}
+
+// ProvinceUpload 上传并更新「访问地区限制 → 仅允许指定省份」使用的 IP 库。
+//
+// POST /global/province/upload   （multipart/form-data，字段名 file）
+//
+// 流程：读取上传文件 -> 在内存中校验是不是有效的 ip2region 库 ->
+// 原子写入 conf/ip2region_v4.xdb -> 重新加载并立即生效。
+// 校验不通过时磁盘上的旧库保持不变，当前生效的省份表也不受影响。
+func (s *GlobalController) ProvinceUpload() {
+	if !s.adminOnly("only admin can upload data") {
+		return
+	}
+	f, fh, err := s.GetFile("file")
+	if err != nil {
+		s.provinceUploadFail("no province database uploaded")
+		return
+	}
+	defer f.Close()
+	if fh.Size > maxProvinceDbUploadSize {
+		s.provinceUploadFail("province database file is too large")
+		return
+	}
+	data, err := io.ReadAll(io.LimitReader(f, maxProvinceDbUploadSize+1))
+	if err != nil {
+		s.provinceUploadFail("read province database failed: " + err.Error())
+		return
+	}
+	if len(data) > maxProvinceDbUploadSize {
+		s.provinceUploadFail("province database file is too large")
+		return
+	}
+
+	if err := file.GetDb().SaveProvinceDb(data); err != nil {
+		logs.Error("update province database failed:", err)
+		s.provinceUploadFail(err.Error())
+		return
+	}
+
+	status := geo.ProvinceDBStatus()
+	s.Data["json"] = map[string]interface{}{
+		"status":        1,
+		"msg":           "province database updated",
+		"detail":        status.Path,
+		"provinceCount": status.ProvinceCount,
+		"rangeCount":    status.RangeCount,
+		"updatedAt":     status.LoadedAt,
 	}
 	s.ServeJSON()
 	s.StopRun()

@@ -238,13 +238,50 @@
                                 <label>
                                     <input type="radio" name="regionLimitMode" value="2" class="region-limit-radio"
                                            {{if eq .regionLimitMode 2}}checked{{end}}
-                                           {{if and (not .provinceDbReady) (ne .regionLimitMode 2)}}disabled{{end}}>
+                                           {{if and (not .provinceDb.Ready) (ne .regionLimitMode 2)}}disabled{{end}}>
                                     <span langtag="word-regionlimit-provinces"></span>
                                 </label>
                             </div>
                             <span class="help-block m-b-none" langtag="info-regionlimittips"></span>
-                            {{if not .provinceDbReady}}
-                            <span class="help-block m-b-none text-danger">{{.provinceDbReason}}</span>
+                            {{if not .provinceDb.Ready}}
+                            <span class="help-block m-b-none text-danger" langtag="info-provincedbmissing"></span>
+                            {{end}}
+                        </div>
+
+                        <div class="setting-field" id="province_db">
+                            <label langtag="word-provincedb"></label>
+                            <div class="row">
+                                <div class="col-sm-12">
+                                    {{if .provinceDb.Ready}}
+                                    <i class="fa fa-check-circle text-success"></i>
+                                    <span langtag="info-provincedbloaded"></span>:
+                                    {{.provinceDb.ProvinceCount}} / {{.provinceDb.RangeCount}}
+                                    {{if not .provinceDb.LoadedAt.IsZero}}
+                                    <span class="text-muted">({{.provinceDb.LoadedAt.Format "2006-01-02 15:04:05"}})</span>
+                                    {{end}}
+                                    {{else}}
+                                    <i class="fa fa-exclamation-circle text-danger"></i>
+                                    <span langtag="info-provincedbmissing"></span>
+                                    {{end}}
+                                </div>
+                                <div class="col-sm-12">
+                                    <span class="help-block m-b-none">{{.provinceDb.Path}}</span>
+                                </div>
+                            </div>
+                            {{if eq true .isAdmin}}
+                            <div class="row">
+                                <div class="col-sm-8">
+                                    <input type="file" id="provinceDbFile" accept=".xdb,application/octet-stream"
+                                           class="form-control">
+                                </div>
+                                <div class="col-sm-4">
+                                    <button class="btn btn-primary" type="button" id="btnUploadProvinceDb"
+                                            onclick="uploadProvinceDb(this)">
+                                        <i class="fa fa-fw fa-upload"></i> <span langtag="word-uploadprovincedb"></span>
+                                    </button>
+                                </div>
+                            </div>
+                            <span class="help-block m-b-none" langtag="info-uploadprovincedbtips"></span>
                             {{end}}
                         </div>
 
@@ -730,6 +767,46 @@
         $('input[name="regionLimitMode"]').on('change', updateRegionLimitUI);
         $('input.province-checkbox').on('change', updateProvinceCount);
     });
+
+    // 上传 IP 库：选择文件 -> POST /global/province/upload
+    // 服务端会先校验文件确实是有效的 ip2region 库，再原子替换 conf 目录下的旧库并立即生效
+    function uploadProvinceDb(btn) {
+        var input = document.getElementById('provinceDbFile');
+        if (!input || !input.files || input.files.length === 0) {
+            alert(langreply('selectprovincefile'));
+            return;
+        }
+        var f = input.files[0];
+        if (f.size > 128 * 1024 * 1024) {
+            alert(langreply('provincefiletoolarge'));
+            return;
+        }
+
+        var fd = new FormData();
+        fd.append('file', f);
+        var $btn = $(btn).prop('disabled', true);
+        $.ajax({
+            type: 'POST',
+            url: window.nps.web_base_url + '/global/province/upload',
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function (res) {
+                $btn.prop('disabled', false);
+                if (res && res.status) {
+                    alert(langreply('provinceuploadsuccess'));
+                    document.location.reload();
+                } else {
+                    var detail = (res && res.detail) ? res.detail : langreply(res && res.msg ? res.msg : 'provinceuploadfailed');
+                    alert(detail);
+                }
+            },
+            error: function () {
+                $btn.prop('disabled', false);
+                alert(langreply('provinceuploadfailed'));
+            }
+        });
+    }
 
     // 重启服务：确认 -> POST /global/restart -> 轮询 /global/restartpid
     // 直到 PID 变化（说明新进程已接管）再刷新页面，避免把还没退出的旧进程误判为已恢复

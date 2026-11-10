@@ -46,7 +46,7 @@ Web 后台「全局参数 → 安全设置 → 访问地区限制」三选一（
 | --- | --- | --- | --- |
 | 不限制 | 0 | 一律放行 | 无 |
 | 仅禁止境外 IP | 1 | 只允许中国大陆 IP 段访问 | `lib/geo/china_ip_list.txt` |
-| 仅允许指定省份 | 2 | 只有勾选省份的 IP 才能访问 | `lib/geo/ip2region_v4.xdb` |
+| 仅允许指定省份 | 2 | 只有勾选省份的 IP 才能访问 | `conf/ip2region_v4.xdb` |
 
 - **历史兼容**：旧配置里的 `BlockForeignIp`（`true` ↔ 模式 1）在首次启动时自动迁移成 `RegionLimitMode`；
   `BlockForeignIp` 仅作为兼容字段保留，保存时由 `RegionLimitMode` 同步写回。
@@ -55,12 +55,19 @@ Web 后台「全局参数 → 安全设置 → 访问地区限制」三选一（
 - **判定库**：
   - 模式 1：`lib/geo/china_ip_list.txt`（内置 6217 条中国大陆 CIDR，约 96KB，随二进制打包）。
     数据来源 `github.com/gaoyifan/china-operator-ip`，仅含 IPv4。
-  - 模式 2：`lib/geo/ip2region_v4.xdb`（约 10.6MB，随二进制打包；`conf/` 目录下放同名文件可覆盖内置版本）。
+  - 模式 2：`conf/ip2region_v4.xdb`（约 10.6MB，**独立文件，不随二进制打包**）。
     数据来源 `github.com/lionsoul2014/ip2region`，仅含 IPv4。
+- **IP 库的加载与更新**：
+  - 路径：`lib/file/province_db.go` 的 `JsonDb.ProvinceDbPath()`，即运行目录 `conf/ip2region_v4.xdb`。
+  - 启动加载：`cmd/nps/nps.go` 调用 `file.GetDb().LoadProvinceDb()`；失败只告警，不影响启动。
+  - 后台上传：`POST /global/province/upload`（仅管理员），`web/controllers/global.go` 的 `ProvinceUpload`。
+    先在内存里 `geo.ParseProvinceIndex()` 校验，再由 `DbUtils.SaveProvinceDb()` 原子落盘并热加载，**无需重启**。
+    校验不通过时磁盘上的旧库与当前生效的省份表都不受影响。
+  - 索引替换用 `atomic.Pointer[provinceIndex]` 整体换掉，读侧（每来一个连接都要查省份）无锁无分配。
 - **匹配算法**：
   - 模式 1：`lib/geo/geo.go` 启动时把 CIDR 归一化为 uint32 区间并按 start 升序排列，查询走二分查找（O(log n)）。
   - 模式 2：`lib/geo/xdb.go` 自行解析 xdb 二进制（不引入 ip2region Go 依赖），
-    惰性加载并预计算成「IP 段 → 省份」有序表（按省份合并相邻段），运行时只做一次二分查找。
+    加载时预计算成「IP 段 → 省份」有序表（按省份合并相邻段），运行时只做一次二分查找。
     xdb v4 的段索引把 IP 按 **uint32 小端** 存放，解析时必须用 `binary.LittleEndian` 读取；
     向量索引仍是按 `ip[0]`/`ip[1]` 定位，归属串格式为「国家|省份|城市|运营商|国家代码」（5 段，字段数不固定，不要写死下标）。
 - **判定规则**：
@@ -198,6 +205,7 @@ Web 左侧新增「服务端日志」菜单项（key `log`），管理员可免�
 - `conf/nps.conf`（INI，beego 读取）：bridge/http/p2p/web/日志等启动参数。
 - `conf/global.json`：可热更新的全局参数（黑名单、限流开关、用户注册开关等）。首次启动自动生成；升级时由 `file.GetDb().MigrateGlobalFromAppConfig()` 从 nps.conf 迁移，不覆盖用户已保存值。
 - `conf/clients.json` / `tasks.json` / `hosts.json`：业务数据持久化。
+- `conf/ip2region_v4.xdb`：访问地区限制用的 IP 库（独立文件，不进二进制）。启动时加载，后台上传可热更新。
 - ID 分配：持久化记录用自增 ID；`NoStore` 临时记录使用独立的**负数 ID 空间**（`getTransientClientId` 等），不污染自增序列。分配与删除分别由 `clientIdLock`/`taskIdLock`/`hostIdLock` 保护。
 
 ## 端口约定

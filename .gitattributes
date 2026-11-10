@@ -3,4 +3,4 @@
 *.html linguist-language=golang
 
 # ip2region 离线库是二进制文件，禁止 git 做换行转换
-lib/geo/*.xdb binary
+conf/*.xdb binary

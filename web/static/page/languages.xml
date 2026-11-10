@@ -1094,6 +1094,30 @@
 			<zh-CN>只有管理员可以备份与恢复数据</zh-CN>
 			<en-US>Only admin can back up and restore data</en-US>
 		</lang>
+		<lang id="selectprovincefile">
+			<zh-CN>请先选择要上传的 IP 库文件</zh-CN>
+			<en-US>Please select an IP database file first</en-US>
+		</lang>
+		<lang id="provincefiletoolarge">
+			<zh-CN>IP 库文件过大</zh-CN>
+			<en-US>The IP database file is too large</en-US>
+		</lang>
+		<lang id="provinceuploadsuccess">
+			<zh-CN>IP 库更新成功，已立即生效</zh-CN>
+			<en-US>IP database updated successfully and took effect immediately</en-US>
+		</lang>
+		<lang id="provinceuploadfailed">
+			<zh-CN>IP 库更新失败，原有的 IP 库保持不变</zh-CN>
+			<en-US>Failed to update the IP database, the previous one is unchanged</en-US>
+		</lang>
+		<lang id="provincedatabaseuploadfailed">
+			<zh-CN>IP 库上传失败</zh-CN>
+			<en-US>Failed to upload the IP database</en-US>
+		</lang>
+		<lang id="onlyadmincanuploaddata">
+			<zh-CN>只有管理员可以上传 IP 库</zh-CN>
+			<en-US>Only admin can upload the IP database</en-US>
+		</lang>
 	</reply>
 
 	<charts>
@@ -1372,6 +1396,26 @@
 	<lang id="info-regionlimitipv6tips">
 		<zh-CN>内置 IP 库仅覆盖 IPv4，IPv6 地址不受省份规则限制</zh-CN>
 		<en-US>The built-in IP database only covers IPv4, so IPv6 addresses are not restricted by the province rules</en-US>
+	</lang>
+	<lang id="word-provincedb">
+		<zh-CN>IP 库</zh-CN>
+		<en-US>IP database</en-US>
+	</lang>
+	<lang id="info-provincedbloaded">
+		<zh-CN>已加载（省份数 / IP 区间数）</zh-CN>
+		<en-US>Loaded (provinces / IP ranges)</en-US>
+	</lang>
+	<lang id="info-provincedbmissing">
+		<zh-CN>IP 库未加载，无法使用「仅允许指定省份访问」，请上传 IP 库文件</zh-CN>
+		<en-US>The IP database is not loaded, so province-based access control is unavailable; please upload an IP database file</en-US>
+	</lang>
+	<lang id="word-uploadprovincedb">
+		<zh-CN>上传 IP 库</zh-CN>
+		<en-US>Upload IP database</en-US>
+	</lang>
+	<lang id="info-uploadprovincedbtips">
+		<zh-CN>上传新的 ip2region 库会覆盖 conf 目录下的 ip2region_v4.xdb，校验通过后立即生效，无需重启服务</zh-CN>
+		<en-US>Uploading a new ip2region database replaces ip2region_v4.xdb in the conf directory; it takes effect immediately after validation, with no service restart</en-US>
 	</lang>
 	<lang id="word-region-north">
 		<zh-CN>华北</zh-CN>
