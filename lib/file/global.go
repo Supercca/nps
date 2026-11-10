@@ -3,6 +3,7 @@ package file
 import (
 	"sync"
 	"sync/atomic"
+	"time"
 
 	"ehang.io/nps/lib/geo"
 	"github.com/astaxie/beego"
@@ -148,8 +149,45 @@ func (s *DbUtils) GetGlobalBlackIpList() []string {
 	return list
 }
 
+// MaxAutoBlackIpPerMinute 是自动拉黑每分钟最多新增的条数。
+//
+// 被扫描时会有大量不同的境外 IP 自动进黑名单，若不限制：
+//   - 黑名单会迅速写满上限（MaxGlobalBlackIpCount），后面的 IP 白扫；
+//   - 每个新 IP 都要全量写一次 conf/global.json，写放大会把磁盘和锁都拖垮。
+//
+// 超出速率上限的 IP 不再进黑名单，但境外判定本身已经拦住了它们，
+// 不影响拦截效果，只是少了一条「事后拉黑」的记录。
+const MaxAutoBlackIpPerMinute = 60
+
+var (
+	// autoBlackIpWindowLock 保护自动拉黑的速率窗口。
+	autoBlackIpWindowLock sync.Mutex
+	// autoBlackIpWindowStart 是当前速率窗口的起点。
+	autoBlackIpWindowStart time.Time
+	// autoBlackIpWindowCount 是当前窗口内新增的条数。
+	autoBlackIpWindowCount int
+)
+
+// allowAutoBlackIp 判断当前是否还在自动拉黑的速率上限内。
+func allowAutoBlackIp() bool {
+	autoBlackIpWindowLock.Lock()
+	defer autoBlackIpWindowLock.Unlock()
+
+	now := time.Now()
+	if autoBlackIpWindowStart.IsZero() || now.Sub(autoBlackIpWindowStart) >= time.Minute {
+		autoBlackIpWindowStart = now
+		autoBlackIpWindowCount = 0
+	}
+	if autoBlackIpWindowCount >= MaxAutoBlackIpPerMinute {
+		return false
+	}
+	autoBlackIpWindowCount++
+	return true
+}
+
 // AddGlobalBlackIp 把 ip 追加到全局黑名单并立即落盘。
-// 返回 true 表示确实新增了一条；ip 为空、已在黑名单中或黑名单已达上限时返回 false。
+// 返回 true 表示确实新增了一条；ip 为空、已在黑名单中、
+// 黑名单已达上限或超出自动拉黑速率上限时返回 false。
 func (s *DbUtils) AddGlobalBlackIp(ip string) bool {
 	if ip == "" {
 		return false
@@ -168,6 +206,10 @@ func (s *DbUtils) AddGlobalBlackIp(ip string) bool {
 		}
 	}
 	if len(global.BlackIpList) >= MaxGlobalBlackIpCount {
+		return false
+	}
+	// 速率上限：被扫描时不至于把磁盘写满。
+	if !allowAutoBlackIp() {
 		return false
 	}
 	global.BlackIpList = append(global.BlackIpList, ip)

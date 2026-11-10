@@ -101,7 +101,9 @@ Web 后台「全局参数 → 安全设置 → 境外 IP 自动加入黑名单�
 - **触发点**：`server/proxy/base.go:blockForeignIp()` 确认是境外 IP 之后调用
   `file.GetDb().AddGlobalBlackIp(ip)`，追加到 `global.BlackIpList` 并立即落盘 `conf/global.json`。
 - **入口 API**（`lib/file/global.go`）：
-  - `AddGlobalBlackIp(ip) bool` — 去重后追加并落盘；已存在或达到 `MaxGlobalBlackIpCount`（10000）时返回 false。
+  - `AddGlobalBlackIp(ip) bool` — 去重后追加并落盘；已存在、达到 `MaxGlobalBlackIpCount`（10000）
+    或超出 `MaxAutoBlackIpPerMinute`（60 条/分钟）速率上限时返回 false。
+    速率上限是为了防被扫描：每个新 IP 都要全量写一次 `global.json`，不限制会把磁盘写满。
   - `GetGlobalBlackIpList() []string` — 返回黑名单**副本**。
   - `SetGlobalBlackIpList(global, list)` — Web 后台保存时整体替换。
 - **并发约束（重要）**：`server/proxy/base.go:in()` 与 `lib/common/util.go:in()` 都是
@@ -110,6 +112,29 @@ Web 后台「全局参数 → 安全设置 → 境外 IP 自动加入黑名单�
   否则并发连接会同时排序/追加同一份切片（数据竞争，甚至切片损坏）。
   客户端级黑名单 `client.BlackIpList` 仍由 `common.IsBlackIp` 直接排序共享切片，
   是遗留问题，不在自动拉黑的影响范围内。
+
+### 拦截日志限流（`server/proxy/blocklog.go`）
+
+访问地区限制的拦截面比「禁止国外 IP」大得多（未勾选省份的国内 IP、全部境外 IP、
+IP 库未覆盖的段都会命中），UDP 链路更是**每收到一个包就判定一次**。
+不加限制的话被扫描时每秒能刷出几千条日志，撑爆日志文件、拖垮日志页轮询。
+
+`BlockLogLimiter` 给所有拦截日志加两层保护：
+
+- **按来源冷却**：同一来源 IP 在 `blockLogCooldown`（5 分钟）内只记一条，
+  冷却期内被拦的次数会被计数，在该来源的下一条日志里以
+  「另有 N 次同类拦截未记录」补上——限流但不丢信息。
+- **全局令牌桶**：所有来源加起来每分钟最多记 `blockLogRatePerMinute`（10）条。
+  单个来源的重复连接**不消耗**全局额度，因此一个 IP 的反复连接不会把预算吃光。
+
+- **接入点**：`server/proxy/base.go` 的 `IsGlobalBlackIp`（Error 级）、
+  `blockForeignIp`、`blockNonAllowedProvince`。三处都必须用全局单例
+  `blockLogLimiter`，因为全局预算是共享的。
+- **Bark 通知**：自动拉黑的推送只在「那条日志真的写出去」时才发，
+  否则被扫描时会有成千上万条推送把通知服务打爆。
+- **新增拦截日志时**：一律走 `blockLogLimiter.Log(key, msg)`，
+  不要直接 `logs.Warn` / `logs.Error`。key 要带场景前缀（如 `province:`、`foreign:`），
+  避免不同拦截点互相抢占冷却额度。
 
 ## Bark 通知与菜单定制
 
