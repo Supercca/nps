@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"ehang.io/nps/lib/file"
+	"ehang.io/nps/lib/geo"
 	"ehang.io/nps/lib/notify"
 	"ehang.io/nps/lib/restart"
 	"github.com/astaxie/beego/logs"
@@ -50,6 +51,11 @@ func (s *GlobalController) Index() {
 	s.Data["httpAddOriginHeader"] = settings.HttpAddOriginHeader
 	s.Data["blockForeignIp"] = settings.BlockForeignIp
 	s.Data["autoBlockForeignIp"] = settings.AutoBlockForeignIp
+	s.Data["regionLimitMode"] = settings.RegionLimitMode
+	s.Data["provinceGroups"] = provinceOptionsWithState(settings.AllowedProvinces)
+	provinceDbReady, provinceDbReason := geo.ProvinceDBReady()
+	s.Data["provinceDbReady"] = provinceDbReady
+	s.Data["provinceDbReason"] = provinceDbReason
 	s.Data["barkEnabled"] = settings.BarkEnabled
 	s.Data["barkUrl"] = settings.BarkUrl
 	s.Data["barkQuietStart"] = settings.BarkQuietStart
@@ -95,7 +101,17 @@ func (s *GlobalController) Save() {
 	global.OpenCaptcha = globalBoolPtr(s.GetBoolNoErr("openCaptcha"))
 	global.SystemInfoDisplay = globalBoolPtr(s.GetBoolNoErr("systemInfoDisplay"))
 	global.HttpAddOriginHeader = globalBoolPtr(s.GetBoolNoErr("httpAddOriginHeader"))
-	global.BlockForeignIp = globalBoolPtr(s.GetBoolNoErr("blockForeignIp"))
+	// 「访问地区限制」是三选一，保存时以单选框的值为准；
+	// 历史字段 BlockForeignIp 同步成「仅禁止境外 IP」，保证旧版本读取时行为一致。
+	regionLimitMode := s.GetIntNoErr("regionLimitMode")
+	switch regionLimitMode {
+	case file.RegionLimitModeBlockForeign, file.RegionLimitModeAllowProvinces:
+	default:
+		regionLimitMode = file.RegionLimitModeNone
+	}
+	global.RegionLimitMode = globalIntPtr(regionLimitMode)
+	global.BlockForeignIp = globalBoolPtr(regionLimitMode == file.RegionLimitModeBlockForeign)
+	global.AllowedProvinces = filterProvinces(s.provincesParam())
 	global.AutoBlockForeignIp = globalBoolPtr(s.GetBoolNoErr("autoBlockForeignIp"))
 	global.BarkEnabled = globalBoolPtr(s.GetBoolNoErr("barkEnabled"))
 	global.BarkUrl = globalStringPtr(strings.TrimSpace(s.getEscapeString("barkUrl")))
@@ -268,6 +284,71 @@ func (s *GlobalController) autoRestartWeekdaysParam() []string {
 	return values
 }
 
+// provincesParam 读取勾选的省份列表。
+// 同 hiddenMenusParam，需要兼容 name 与 name[] 两种写法。
+func (s *GlobalController) provincesParam() []string {
+	values := s.GetStrings("allowedProvinces")
+	values = append(values, s.GetStrings("allowedProvinces[]")...)
+	return values
+}
+
+// provinceOption 是省份勾选项的视图模型。
+type provinceOption struct {
+	// Name 是省份规范名，同时是表单提交的值。
+	Name string
+	// LangKey 是前端 i18n 词条 key。
+	LangKey string
+	// Checked 表示该省份当前是否在允许列表中。
+	Checked bool
+}
+
+// provinceGroupOption 是大区分组的视图模型。
+type provinceGroupOption struct {
+	// LangKey 是大区的 i18n 词条 key。
+	LangKey string
+	// Provinces 是该大区下的省份勾选项。
+	Provinces []provinceOption
+}
+
+// provinceOptionsWithState 返回带勾选状态的省份分组列表，供全局参数页渲染。
+func provinceOptionsWithState(selected []string) []provinceGroupOption {
+	state := make(map[string]bool, len(selected))
+	for _, item := range selected {
+		if name := geo.NormalizeProvinceName(item); name != "" {
+			state[name] = true
+		}
+	}
+	groups := geo.ProvincesByGroup()
+	result := make([]provinceGroupOption, 0, len(groups))
+	for _, group := range groups {
+		item := provinceGroupOption{LangKey: group.LangKey}
+		for _, province := range group.Provinces {
+			item.Provinces = append(item.Provinces, provinceOption{
+				Name:    province.Name,
+				LangKey: province.LangKey,
+				Checked: state[province.Name],
+			})
+		}
+		result = append(result, item)
+	}
+	return result
+}
+
+// filterProvinces 只保留合法且去重后的省份名，避免写入任意值。
+func filterProvinces(values []string) []string {
+	seen := make(map[string]bool, len(values))
+	result := make([]string, 0, len(values))
+	for _, value := range values {
+		name := geo.NormalizeProvinceName(strings.TrimSpace(value))
+		if name == "" || seen[name] {
+			continue
+		}
+		seen[name] = true
+		result = append(result, name)
+	}
+	return result
+}
+
 // filterWeekdays 只保留合法且去重后的星期（0-6）。
 func filterWeekdays(values []string) []int {
 	seen := make(map[int]bool, len(values))
@@ -363,5 +444,9 @@ func globalBoolPtr(value bool) *bool {
 }
 
 func globalStringPtr(value string) *string {
+	return &value
+}
+
+func globalIntPtr(value int) *int {
 	return &value
 }

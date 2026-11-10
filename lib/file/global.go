@@ -2,7 +2,9 @@ package file
 
 import (
 	"sync"
+	"sync/atomic"
 
+	"ehang.io/nps/lib/geo"
 	"github.com/astaxie/beego"
 )
 
@@ -25,7 +27,13 @@ type GlobalSettings struct {
 	SystemInfoDisplay       bool
 	HttpAddOriginHeader     bool
 	// BlockForeignIp 为 true 时拒绝境外 IP 访问（通过内置中国大陆 CIDR 段库判定）。
+	// 该字段已被 RegionLimitMode 取代，仅作为历史兼容保留。
 	BlockForeignIp bool
+	// RegionLimitMode 是「访问地区限制」的模式：
+	// 0 = 不限制；1 = 仅禁止境外 IP；2 = 仅允许所选省份访问。
+	RegionLimitMode int
+	// AllowedProvinces 是省份模式下允许访问的省级行政区（规范中文简称）。
+	AllowedProvinces []string
 	// AutoBlockForeignIp 为 true 时，把判定为境外的 IP 自动追加到全局黑名单。
 	// 仅在 BlockForeignIp 开启时生效。
 	AutoBlockForeignIp bool
@@ -49,6 +57,76 @@ type GlobalSettings struct {
 // MaxGlobalBlackIpCount 是全局黑名单的最大条目数。
 // 自动拉黑时超过该上限就不再追加，避免被大量境外 IP 撑爆内存与 global.json。
 const MaxGlobalBlackIpCount = 10000
+
+// 「访问地区限制」的三个模式。
+const (
+	// RegionLimitModeNone 不限制访问地区（默认）。
+	RegionLimitModeNone = 0
+	// RegionLimitModeBlockForeign 仅禁止境外 IP 访问。
+	// 使用内置的中国大陆 CIDR 段库判定，不依赖 ip2region 离线库。
+	RegionLimitModeBlockForeign = 1
+	// RegionLimitModeAllowProvinces 仅允许所选省级行政区访问。
+	// 使用 ip2region 离线库定位 IP 所属省份。
+	RegionLimitModeAllowProvinces = 2
+)
+
+// RegionLimit 是「访问地区限制」在热路径上的只读快照。
+//
+// 代理层每来一个连接都要读一次限制配置，这里用 atomic 缓存一份快照，
+// 避免每次连接都复制切片、构造 map。配置变更时由 refreshRegionLimit 重建快照。
+type RegionLimit struct {
+	// Mode 是限制模式，取值为 RegionLimitModeXxx。
+	Mode int
+	// AutoBlockForeign 为 true 时，判定为境外的 IP 会自动加入全局黑名单。
+	// 仅在 RegionLimitModeBlockForeign 模式下生效。
+	AutoBlockForeign bool
+	// Allowed 是省份模式下允许访问的省级行政区集合（规范中文简称）。
+	// Mode 不为 RegionLimitModeAllowProvinces 时为 nil。
+	Allowed map[string]bool
+}
+
+// regionLimitCache 缓存当前的地区限制快照。
+var regionLimitCache atomic.Value
+
+// refreshRegionLimit 依据最新的全局配置重建地区限制快照。
+// 配置的写入路径（保存、加载、迁移）都要调用它，保证快照与配置一致。
+func refreshRegionLimit(global *Glob) {
+	limit := &RegionLimit{Mode: RegionLimitModeNone}
+	if global != nil {
+		mode := RegionLimitModeNone
+		switch {
+		case global.RegionLimitMode != nil:
+			mode = *global.RegionLimitMode
+		case global.BlockForeignIp != nil && *global.BlockForeignIp:
+			// 兼容历史配置：只有 BlockForeignIp 时等价于「仅禁止境外 IP」。
+			mode = RegionLimitModeBlockForeign
+		}
+		if mode != RegionLimitModeNone && mode != RegionLimitModeBlockForeign && mode != RegionLimitModeAllowProvinces {
+			mode = RegionLimitModeNone
+		}
+		limit.Mode = mode
+		limit.AutoBlockForeign = boolPtrValue(global.AutoBlockForeignIp)
+		if mode == RegionLimitModeAllowProvinces && len(global.AllowedProvinces) > 0 {
+			limit.Allowed = make(map[string]bool, len(global.AllowedProvinces))
+			for _, item := range global.AllowedProvinces {
+				name := geo.NormalizeProvinceName(item)
+				if name != "" {
+					limit.Allowed[name] = true
+				}
+			}
+		}
+	}
+	regionLimitCache.Store(limit)
+}
+
+// GetRegionLimit 返回当前生效的「访问地区限制」快照。
+// 返回值只读，调用方不应修改其中的 map。
+func (s *DbUtils) GetRegionLimit() RegionLimit {
+	if v, ok := regionLimitCache.Load().(*RegionLimit); ok && v != nil {
+		return *v
+	}
+	return RegionLimit{Mode: RegionLimitModeNone}
+}
 
 // globalBlackIpLock 保护全局黑名单的读写。
 // 代理层每来一个连接都要在黑名单里查找一次，而查找用的 in() 会先就地排序
@@ -128,6 +206,28 @@ func stringPtrValue(v *string) string {
 	return *v
 }
 
+// regionLimitModeOf 读取配置中的地区限制模式。
+// RegionLimitMode 尚未初始化时回退到历史字段 BlockForeignIp，
+// 保证升级前保存过「禁止国外 IP 访问」的用户行为不变。
+func regionLimitModeOf(global *Glob) int {
+	if global == nil {
+		return RegionLimitModeNone
+	}
+	if global.RegionLimitMode != nil {
+		mode := *global.RegionLimitMode
+		switch mode {
+		case RegionLimitModeNone, RegionLimitModeBlockForeign, RegionLimitModeAllowProvinces:
+			return mode
+		default:
+			return RegionLimitModeNone
+		}
+	}
+	if boolPtrValue(global.BlockForeignIp) {
+		return RegionLimitModeBlockForeign
+	}
+	return RegionLimitModeNone
+}
+
 // GetGlobalSettings 返回全局参数的只读快照，未初始化的字段使用历史默认值。
 func (s *DbUtils) GetGlobalSettings() GlobalSettings {
 	settings := GlobalSettings{
@@ -163,6 +263,10 @@ func (s *DbUtils) GetGlobalSettings() GlobalSettings {
 	settings.SystemInfoDisplay = boolPtrValue(global.SystemInfoDisplay)
 	settings.HttpAddOriginHeader = boolPtrValue(global.HttpAddOriginHeader)
 	settings.BlockForeignIp = boolPtrValue(global.BlockForeignIp)
+	settings.RegionLimitMode = regionLimitModeOf(global)
+	if len(global.AllowedProvinces) > 0 {
+		settings.AllowedProvinces = append([]string(nil), global.AllowedProvinces...)
+	}
 	settings.AutoBlockForeignIp = boolPtrValue(global.AutoBlockForeignIp)
 	settings.BarkEnabled = boolPtrValue(global.BarkEnabled)
 	settings.BarkUrl = stringPtrValue(global.BarkUrl)
@@ -192,6 +296,10 @@ func boolPtr(value bool) *bool {
 }
 
 func stringPtr(value string) *string {
+	return &value
+}
+
+func intPtr(value int) *int {
 	return &value
 }
 
@@ -271,6 +379,11 @@ func (s *DbUtils) MigrateGlobalFromAppConfig() {
 		global.BlockForeignIp = boolPtr(appConfigBool("block_foreign_ip", false))
 		changed = true
 	}
+	// 访问地区限制模式：历史配置里只有 BlockForeignIp，迁移成「仅禁止境外 IP」。
+	if global.RegionLimitMode == nil {
+		global.RegionLimitMode = intPtr(regionLimitModeOf(global))
+		changed = true
+	}
 	if global.AutoBlockForeignIp == nil {
 		global.AutoBlockForeignIp = boolPtr(appConfigBool("auto_block_foreign_ip", false))
 		changed = true
@@ -304,4 +417,6 @@ func (s *DbUtils) MigrateGlobalFromAppConfig() {
 	if changed {
 		_ = s.SaveGlobal(global)
 	}
+	// 无论配置是否有变化都要刷新快照，避免进程启动时快照为空导致限制不生效。
+	refreshRegionLimit(global)
 }

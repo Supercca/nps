@@ -115,8 +115,8 @@ func (s *BaseServer) DealClient(c *conn.Conn, client *file.Client, addr string,
 		return nil
 	}
 
-	// 判断是否开启了「禁止国外 IP 访问」
-	if IsForeignIp(c.RemoteAddr().String()) {
+	// 判断访问来源是否被「访问地区限制」拦截
+	if IsRegionRestricted(c.RemoteAddr().String()) {
 		c.Close()
 		return nil
 	}
@@ -160,30 +160,90 @@ func IsGlobalBlackIp(ipPort string) bool {
 	return false
 }
 
-// IsForeignIp 判断访问来源是否为境外 IP。
-// 仅在全局参数「禁止国外 IP 访问」开启时生效：命中中国大陆 IP 段库之外的公网地址
-// 视为境外并拒绝；私有/保留地址与 IPv6 一律放行。
+// IsRegionRestricted 判断访问来源是否被「访问地区限制」拦截。
+//
+// 这是访问地区限制的统一判定入口，覆盖三种模式：
+//   - 不限制：一律放行。
+//   - 仅禁止境外 IP：命中内置中国大陆 CIDR 段库之外的公网地址时拦截。
+//   - 仅允许所选省份：IP 必须归属到允许列表中的中国省级行政区才放行。
+//
+// 内网 / 回环 / 保留地址在所有模式下都放行；IPv6 不在 ip2region 库覆盖范围内，
+// 省份模式下同样放行（后台页面会提示这一点）。
+func IsRegionRestricted(ipPort string) bool {
+	limit := file.GetDb().GetRegionLimit()
+	switch limit.Mode {
+	case file.RegionLimitModeBlockForeign:
+		return blockForeignIp(ipPort, limit)
+	case file.RegionLimitModeAllowProvinces:
+		return blockNonAllowedProvince(ipPort, limit)
+	}
+	return false
+}
+
+// blockForeignIp 判定 IP 是否属于境外地址。
 //
 // 若同时开启了「境外 IP 自动加入黑名单」，确认是境外地址后会把该 IP 追加到
 // 全局黑名单（global.BlackIpList）并立即落盘。
-func IsForeignIp(ipPort string) bool {
-	settings := file.GetDb().GetGlobalSettings()
-	if !settings.BlockForeignIp {
-		return false
-	}
+func blockForeignIp(ipPort string, limit file.RegionLimit) bool {
 	ip := common.GetIpByAddr(ipPort)
 	if ip == "" {
 		return false
 	}
-	if geo.IsForeignIPStr(ip) {
-		logs.Warn("IP地址[" + ip + "]属于境外地址，已按「禁止国外IP访问」策略拦截")
-		if settings.AutoBlockForeignIp {
-			if file.GetDb().AddGlobalBlackIp(ip) {
-				logs.Warn("IP地址[" + ip + "]已自动加入全局黑名单")
-				notify.NotifyBlackIpAdded(ip, "境外 IP 自动拦截")
-			}
+	if !geo.IsForeignIPStr(ip) {
+		return false
+	}
+	logs.Warn("IP地址[" + ip + "]属于境外地址，已按「禁止国外IP访问」策略拦截")
+	if limit.AutoBlockForeign {
+		if file.GetDb().AddGlobalBlackIp(ip) {
+			logs.Warn("IP地址[" + ip + "]已自动加入全局黑名单")
+			notify.NotifyBlackIpAdded(ip, "境外 IP 自动拦截")
 		}
+	}
+	return true
+}
+
+// blockNonAllowedProvince 判定 IP 是否属于未获准访问的省份。
+//
+// 判定依据是 ip2region 离线库：IP 必须能定位到一个中国省级行政区，
+// 且该省份在允许列表里，才放行。境外地址、库中查不到的地址都会被拦截。
+func blockNonAllowedProvince(ipPort string, limit file.RegionLimit) bool {
+	ip := common.GetIpByAddr(ipPort)
+	if ip == "" {
+		return false
+	}
+	netIP := net.ParseIP(ip)
+	if netIP == nil {
+		return false
+	}
+	// 内网 / 回环 / 保留地址一律放行，与「禁止国外 IP 访问」保持一致。
+	if geo.IsPrivateIP(netIP) {
+		return false
+	}
+	// 内置 IP 库只覆盖 IPv4，IPv6 无法定位省份，放行。
+	if netIP.To4() == nil {
+		return false
+	}
+	province := geo.LookupProvince(netIP)
+	if province == "" {
+		logs.Warn("IP地址[" + ip + "]未归属任何中国省份，已按「访问地区限制」策略拦截")
 		return true
 	}
-	return false
+	if limit.Allowed[province] {
+		return false
+	}
+	logs.Warn("IP地址[" + ip + "]所属省份[" + province + "]不在允许访问的省份列表内，已按「访问地区限制」策略拦截")
+	return true
+}
+
+// IsForeignIp 判断访问来源是否为境外 IP。
+// 仅对应「仅禁止境外 IP」模式；统一判定入口请使用 IsRegionRestricted。
+//
+// 若同时开启了「境外 IP 自动加入黑名单」，确认是境外地址后会把该 IP 追加到
+// 全局黑名单（global.BlackIpList）并立即落盘。
+func IsForeignIp(ipPort string) bool {
+	limit := file.GetDb().GetRegionLimit()
+	if limit.Mode != file.RegionLimitModeBlockForeign {
+		return false
+	}
+	return blockForeignIp(ipPort, limit)
 }

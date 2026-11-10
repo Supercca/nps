@@ -1333,6 +1333,210 @@
 		<zh-CN>开启后，客户端必须完成 IP 授权后才能建立隧道</zh-CN>
 		<en-US>When enabled, clients must complete IP authorization before tunnels can be created</en-US>
 	</lang>
+	<lang id="word-regionlimit">
+		<zh-CN>访问地区限制</zh-CN>
+		<en-US>Access region limit</en-US>
+	</lang>
+	<lang id="info-regionlimittips">
+		<zh-CN>按访问来源的地区限制流量：完全不限制、仅禁止境外 IP，或仅允许指定省份访问</zh-CN>
+		<en-US>Restrict traffic by the region of the source address: no restriction, block foreign IPs only, or allow selected provinces only</en-US>
+	</lang>
+	<lang id="word-regionlimit-none">
+		<zh-CN>不限制</zh-CN>
+		<en-US>No restriction</en-US>
+	</lang>
+	<lang id="word-regionlimit-provinces">
+		<zh-CN>仅允许指定省份访问</zh-CN>
+		<en-US>Only allow selected provinces</en-US>
+	</lang>
+	<lang id="word-allowedprovinces">
+		<zh-CN>允许访问的省份</zh-CN>
+		<en-US>Allowed provinces</en-US>
+	</lang>
+	<lang id="word-selectall">
+		<zh-CN>全选</zh-CN>
+		<en-US>Select all</en-US>
+	</lang>
+	<lang id="word-invertselection">
+		<zh-CN>反选</zh-CN>
+		<en-US>Invert selection</en-US>
+	</lang>
+	<lang id="word-selectedprovinces">
+		<zh-CN>已选省份数</zh-CN>
+		<en-US>Selected provinces</en-US>
+	</lang>
+	<lang id="info-allowedprovincestips">
+		<zh-CN>只有被勾选省份的 IP 才能访问隧道与域名；不勾选任何省份将拒绝全部公网访问，内网地址不受影响</zh-CN>
+		<en-US>Only IPs located in the checked provinces can access tunnels and domains; checking none blocks all public access, while private addresses are unaffected</en-US>
+	</lang>
+	<lang id="info-regionlimitipv6tips">
+		<zh-CN>内置 IP 库仅覆盖 IPv4，IPv6 地址不受省份规则限制</zh-CN>
+		<en-US>The built-in IP database only covers IPv4, so IPv6 addresses are not restricted by the province rules</en-US>
+	</lang>
+	<lang id="word-region-north">
+		<zh-CN>华北</zh-CN>
+		<en-US>North China</en-US>
+	</lang>
+	<lang id="word-region-northeast">
+		<zh-CN>东北</zh-CN>
+		<en-US>Northeast China</en-US>
+	</lang>
+	<lang id="word-region-east">
+		<zh-CN>华东</zh-CN>
+		<en-US>East China</en-US>
+	</lang>
+	<lang id="word-region-central">
+		<zh-CN>华中</zh-CN>
+		<en-US>Central China</en-US>
+	</lang>
+	<lang id="word-region-south">
+		<zh-CN>华南</zh-CN>
+		<en-US>South China</en-US>
+	</lang>
+	<lang id="word-region-southwest">
+		<zh-CN>西南</zh-CN>
+		<en-US>Southwest China</en-US>
+	</lang>
+	<lang id="word-region-northwest">
+		<zh-CN>西北</zh-CN>
+		<en-US>Northwest China</en-US>
+	</lang>
+	<lang id="word-province-beijing">
+		<zh-CN>北京</zh-CN>
+		<en-US>Beijing</en-US>
+	</lang>
+	<lang id="word-province-tianjin">
+		<zh-CN>天津</zh-CN>
+		<en-US>Tianjin</en-US>
+	</lang>
+	<lang id="word-province-hebei">
+		<zh-CN>河北</zh-CN>
+		<en-US>Hebei</en-US>
+	</lang>
+	<lang id="word-province-shanxi">
+		<zh-CN>山西</zh-CN>
+		<en-US>Shanxi</en-US>
+	</lang>
+	<lang id="word-province-neimenggu">
+		<zh-CN>内蒙古</zh-CN>
+		<en-US>Inner Mongolia</en-US>
+	</lang>
+	<lang id="word-province-liaoning">
+		<zh-CN>辽宁</zh-CN>
+		<en-US>Liaoning</en-US>
+	</lang>
+	<lang id="word-province-jilin">
+		<zh-CN>吉林</zh-CN>
+		<en-US>Jilin</en-US>
+	</lang>
+	<lang id="word-province-heilongjiang">
+		<zh-CN>黑龙江</zh-CN>
+		<en-US>Heilongjiang</en-US>
+	</lang>
+	<lang id="word-province-shanghai">
+		<zh-CN>上海</zh-CN>
+		<en-US>Shanghai</en-US>
+	</lang>
+	<lang id="word-province-jiangsu">
+		<zh-CN>江苏</zh-CN>
+		<en-US>Jiangsu</en-US>
+	</lang>
+	<lang id="word-province-zhejiang">
+		<zh-CN>浙江</zh-CN>
+		<en-US>Zhejiang</en-US>
+	</lang>
+	<lang id="word-province-anhui">
+		<zh-CN>安徽</zh-CN>
+		<en-US>Anhui</en-US>
+	</lang>
+	<lang id="word-province-fujian">
+		<zh-CN>福建</zh-CN>
+		<en-US>Fujian</en-US>
+	</lang>
+	<lang id="word-province-jiangxi">
+		<zh-CN>江西</zh-CN>
+		<en-US>Jiangxi</en-US>
+	</lang>
+	<lang id="word-province-shandong">
+		<zh-CN>山东</zh-CN>
+		<en-US>Shandong</en-US>
+	</lang>
+	<lang id="word-province-taiwan">
+		<zh-CN>台湾</zh-CN>
+		<en-US>Taiwan</en-US>
+	</lang>
+	<lang id="word-province-henan">
+		<zh-CN>河南</zh-CN>
+		<en-US>Henan</en-US>
+	</lang>
+	<lang id="word-province-hubei">
+		<zh-CN>湖北</zh-CN>
+		<en-US>Hubei</en-US>
+	</lang>
+	<lang id="word-province-hunan">
+		<zh-CN>湖南</zh-CN>
+		<en-US>Hunan</en-US>
+	</lang>
+	<lang id="word-province-guangdong">
+		<zh-CN>广东</zh-CN>
+		<en-US>Guangdong</en-US>
+	</lang>
+	<lang id="word-province-guangxi">
+		<zh-CN>广西</zh-CN>
+		<en-US>Guangxi</en-US>
+	</lang>
+	<lang id="word-province-hainan">
+		<zh-CN>海南</zh-CN>
+		<en-US>Hainan</en-US>
+	</lang>
+	<lang id="word-province-hongkong">
+		<zh-CN>香港</zh-CN>
+		<en-US>Hong Kong</en-US>
+	</lang>
+	<lang id="word-province-macau">
+		<zh-CN>澳门</zh-CN>
+		<en-US>Macau</en-US>
+	</lang>
+	<lang id="word-province-chongqing">
+		<zh-CN>重庆</zh-CN>
+		<en-US>Chongqing</en-US>
+	</lang>
+	<lang id="word-province-sichuan">
+		<zh-CN>四川</zh-CN>
+		<en-US>Sichuan</en-US>
+	</lang>
+	<lang id="word-province-guizhou">
+		<zh-CN>贵州</zh-CN>
+		<en-US>Guizhou</en-US>
+	</lang>
+	<lang id="word-province-yunnan">
+		<zh-CN>云南</zh-CN>
+		<en-US>Yunnan</en-US>
+	</lang>
+	<lang id="word-province-xizang">
+		<zh-CN>西藏</zh-CN>
+		<en-US>Tibet</en-US>
+	</lang>
+	<lang id="word-province-shaanxi">
+		<zh-CN>陕西</zh-CN>
+		<en-US>Shaanxi</en-US>
+	</lang>
+	<lang id="word-province-gansu">
+		<zh-CN>甘肃</zh-CN>
+		<en-US>Gansu</en-US>
+	</lang>
+	<lang id="word-province-qinghai">
+		<zh-CN>青海</zh-CN>
+		<en-US>Qinghai</en-US>
+	</lang>
+	<lang id="word-province-ningxia">
+		<zh-CN>宁夏</zh-CN>
+		<en-US>Ningxia</en-US>
+	</lang>
+	<lang id="word-province-xinjiang">
+		<zh-CN>新疆</zh-CN>
+		<en-US>Xinjiang</en-US>
+	</lang>
 	<lang id="word-blockforeignip">
 		<zh-CN>禁止国外 IP 访问</zh-CN>
 		<en-US>Block foreign IP access</en-US>
@@ -1346,8 +1550,8 @@
 		<en-US>Auto add foreign IP to blacklist</en-US>
 	</lang>
 	<lang id="info-autoblockforeigniptips">
-		<zh-CN>开启「禁止国外 IP 访问」后，被判定为境外的 IP 会自动追加到全局黑名单并立即生效；需同时开启「禁止国外 IP 访问」</zh-CN>
-		<en-US>When "Block foreign IP access" is enabled, detected foreign IPs are automatically appended to the global blacklist and take effect immediately; requires "Block foreign IP access" to be on</en-US>
+		<zh-CN>开启「禁止国外 IP 访问」后，被判定为境外的 IP 会自动追加到全局黑名单并立即生效；仅在该模式下生效</zh-CN>
+		<en-US>When "Block foreign IP access" is enabled, detected foreign IPs are automatically appended to the global blacklist and take effect immediately; it only works in that mode</en-US>
 	</lang>
 	<lang id="word-barknotify">
 		<zh-CN>Bark 通知</zh-CN>

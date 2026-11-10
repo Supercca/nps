@@ -102,6 +102,8 @@ func (s *JsonDb) LoadGlobalFromJsonFile() {
 		}
 		s.Global = post
 	})
+	// 从磁盘加载后同步刷新地区限制快照。
+	refreshRegionLimit(s.Global)
 }
 
 func (s *JsonDb) GetClient(id int) (c *Client, err error) {

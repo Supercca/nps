@@ -222,24 +222,72 @@
                             </div>
                         </div>
 
-                        <div class="setting-row">
-                            <div class="setting-main">
-                                <div class="setting-title" langtag="word-blockforeignip"></div>
-                                <div class="setting-desc" langtag="info-blockforeigniptips"></div>
+                        <div class="setting-field" id="region_limit">
+                            <label langtag="word-regionlimit"></label>
+                            <div class="radio">
+                                <label>
+                                    <input type="radio" name="regionLimitMode" value="0" class="region-limit-radio"
+                                           {{if eq .regionLimitMode 0}}checked{{end}}>
+                                    <span langtag="word-regionlimit-none"></span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="regionLimitMode" value="1" class="region-limit-radio"
+                                           {{if eq .regionLimitMode 1}}checked{{end}}>
+                                    <span langtag="word-blockforeignip"></span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="regionLimitMode" value="2" class="region-limit-radio"
+                                           {{if eq .regionLimitMode 2}}checked{{end}}
+                                           {{if and (not .provinceDbReady) (ne .regionLimitMode 2)}}disabled{{end}}>
+                                    <span langtag="word-regionlimit-provinces"></span>
+                                </label>
                             </div>
-                            <div class="setting-control">
-                                <div class="onoffswitch">
-                                    <input type="checkbox" name="blockForeignIp" value="1" class="onoffswitch-checkbox"
-                                           id="blockForeignIp" {{if .blockForeignIp}}checked{{end}}>
-                                    <label class="onoffswitch-label" for="blockForeignIp">
-                                        <span class="onoffswitch-inner"></span>
-                                        <span class="onoffswitch-switch"></span>
-                                    </label>
-                                </div>
-                            </div>
+                            <span class="help-block m-b-none" langtag="info-regionlimittips"></span>
+                            {{if not .provinceDbReady}}
+                            <span class="help-block m-b-none text-danger">{{.provinceDbReason}}</span>
+                            {{end}}
                         </div>
 
-                        <div class="setting-row">
+                        <div class="setting-field" id="province_picker">
+                            <label langtag="word-allowedprovinces"></label>
+                            <div class="row">
+                                <div class="col-sm-12">
+                                    <button type="button" class="btn btn-default btn-sm" onclick="selectProvinces('all')">
+                                        <i class="fa fa-fw fa-check"></i> <span langtag="word-selectall"></span>
+                                    </button>
+                                    <button type="button" class="btn btn-default btn-sm" onclick="selectProvinces('invert')">
+                                        <i class="fa fa-fw fa-exchange"></i> <span langtag="word-invertselection"></span>
+                                    </button>
+                                    <span class="text-muted">
+                                        <span langtag="word-selectedprovinces"></span>: <span id="selectedProvinceCount">0</span>
+                                    </span>
+                                </div>
+                            </div>
+                            {{range .provinceGroups}}
+                            <div class="row">
+                                <div class="col-sm-12"><strong langtag="{{.LangKey}}"></strong></div>
+                                <div class="col-sm-12">
+                                    <div class="row">
+                                        {{range .Provinces}}
+                                        <div class="col-sm-3">
+                                            <div class="checkbox">
+                                                <label>
+                                                    <input type="checkbox" name="allowedProvinces" value="{{.Name}}"
+                                                           class="province-checkbox" {{if .Checked}}checked{{end}}>
+                                                    <span langtag="{{.LangKey}}"></span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        {{end}}
+                                    </div>
+                                </div>
+                            </div>
+                            {{end}}
+                            <span class="help-block m-b-none" langtag="info-allowedprovincestips"></span>
+                            <span class="help-block m-b-none" langtag="info-regionlimitipv6tips"></span>
+                        </div>
+
+                        <div class="setting-row" id="auto_block_foreign_ip">
                             <div class="setting-main">
                                 <div class="setting-title" langtag="word-autoblockforeignip"></div>
                                 <div class="setting-desc" langtag="info-autoblockforeigniptips"></div>
@@ -649,6 +697,40 @@
 </div>
 
 <script>
+    // 访问地区限制：三选一单选框 + 按省份勾选
+    // 只有选中「仅允许指定省份访问」时才展示省份勾选区，
+    // 只有选中「禁止国外 IP 访问」时才展示境外 IP 自动拉黑的开关。
+    function updateRegionLimitUI() {
+        var mode = $('input[name="regionLimitMode"]:checked').val();
+        $('#province_picker').toggle(mode === '2');
+        $('#auto_block_foreign_ip').toggle(mode === '1');
+    }
+
+    // 更新已选省份数量
+    function updateProvinceCount() {
+        $('#selectedProvinceCount').text($('input.province-checkbox:checked').length);
+    }
+
+    // 批量勾选省份：all = 全选，invert = 反选
+    function selectProvinces(action) {
+        var $boxes = $('input.province-checkbox');
+        if (action === 'invert') {
+            $boxes.each(function () {
+                $(this).prop('checked', !$(this).prop('checked'));
+            });
+        } else {
+            $boxes.prop('checked', true);
+        }
+        updateProvinceCount();
+    }
+
+    $(document).ready(function () {
+        updateRegionLimitUI();
+        updateProvinceCount();
+        $('input[name="regionLimitMode"]').on('change', updateRegionLimitUI);
+        $('input.province-checkbox').on('change', updateProvinceCount);
+    });
+
     // 重启服务：确认 -> POST /global/restart -> 轮询 /global/restartpid
     // 直到 PID 变化（说明新进程已接管）再刷新页面，避免把还没退出的旧进程误判为已恢复
     function restartService(btn) {

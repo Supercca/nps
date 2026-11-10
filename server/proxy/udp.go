@@ -85,7 +85,7 @@ func (s *UdpModeServer) Start() error {
 			common.BufPoolUdp.Put(buf)
 			continue
 		}
-		if IsForeignIp(addr.String()) {
+		if IsRegionRestricted(addr.String()) {
 			common.BufPoolUdp.Put(buf)
 			continue
 		}

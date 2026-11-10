@@ -38,22 +38,45 @@ CONN_TEST(3B) → 核心版本(len32+content) → 客户端版本 → 服务端�
 
 加密（TLS）/压缩（snappy）/限速统一在 `lib/conn/conn.go:GetConn` 包装层实现。
 
-## 禁止国外 IP 访问
+## 访问地区限制
 
-Web 后台「全局参数 → 安全设置 → 禁止国外 IP 访问」开关（`global.json` 的 `BlockForeignIp`），保存后立即生效，无需重启。
+Web 后台「全局参数 → 安全设置 → 访问地区限制」三选一（`global.json` 的 `RegionLimitMode`），保存后立即生效，无需重启。
 
-- **判定库**：`lib/geo/china_ip_list.txt`（内置 6217 条中国大陆 CIDR，约 96KB，随二进制打包）。
-  数据来源 `github.com/gaoyifan/china-operator-ip`，仅含 IPv4。
-- **匹配算法**：`lib/geo/geo.go` 启动时把 CIDR 归一化为 uint32 区间并按 start 升序排列，查询走二分查找（O(log n)）。
+| 模式 | 值 | 含义 | 依赖 |
+| --- | --- | --- | --- |
+| 不限制 | 0 | 一律放行 | 无 |
+| 仅禁止境外 IP | 1 | 只允许中国大陆 IP 段访问 | `lib/geo/china_ip_list.txt` |
+| 仅允许指定省份 | 2 | 只有勾选省份的 IP 才能访问 | `lib/geo/ip2region_v4.xdb` |
+
+- **历史兼容**：旧配置里的 `BlockForeignIp`（`true` ↔ 模式 1）在首次启动时自动迁移成 `RegionLimitMode`；
+  `BlockForeignIp` 仅作为兼容字段保留，保存时由 `RegionLimitMode` 同步写回。
+- **允许省份**：`global.json` 的 `AllowedProvinces`，存的是规范中文简称（如 `广东`、`内蒙古`、`香港`），
+  由 `geo.NormalizeProvinceName()` 归一化后保存，非法值会被丢弃。
+- **判定库**：
+  - 模式 1：`lib/geo/china_ip_list.txt`（内置 6217 条中国大陆 CIDR，约 96KB，随二进制打包）。
+    数据来源 `github.com/gaoyifan/china-operator-ip`，仅含 IPv4。
+  - 模式 2：`lib/geo/ip2region_v4.xdb`（约 10.6MB，随二进制打包；`conf/` 目录下放同名文件可覆盖内置版本）。
+    数据来源 `github.com/lionsoul2014/ip2region`，仅含 IPv4。
+- **匹配算法**：
+  - 模式 1：`lib/geo/geo.go` 启动时把 CIDR 归一化为 uint32 区间并按 start 升序排列，查询走二分查找（O(log n)）。
+  - 模式 2：`lib/geo/xdb.go` 自行解析 xdb 二进制（不引入 ip2region Go 依赖），
+    惰性加载并预计算成「IP 段 → 省份」有序表（按省份合并相邻段），运行时只做一次二分查找。
+    xdb v4 的段索引把 IP 按 **uint32 小端** 存放，解析时必须用 `binary.LittleEndian` 读取；
+    向量索引仍是按 `ip[0]`/`ip[1]` 定位，归属串格式为「国家|省份|城市|运营商|国家代码」（5 段，字段数不固定，不要写死下标）。
 - **判定规则**：
-  - IPv4 命中中国 CIDR → 境内，放行；否则 → 境外，拦截。
-  - 私有/保留地址（10.x、172.16-31.x、192.168.x、127.x、169.254.x、100.64-127.x、0.x、224.x+）→ 一律放行。
-  - IPv6 → 一律放行（内置库不含 IPv6，避免误杀）。
+  - 模式 1：IPv4 命中中国 CIDR → 境内，放行；否则 → 境外，拦截。
+  - 模式 2：IP 必须能定位到一个中国省级行政区，且该省份在允许列表里才放行；境外与库中查不到的地址一律拦截。
+  - 私有/保留地址（10.x、172.16-31.x、192.168.x、127.x、169.254.x、100.64-127.x、0.x、224.x+）→ 两种模式都放行。
+  - IPv6 → 一律放行（内置库不含 IPv6，避免误杀）；后台页面会提示 IPv6 不受省份规则限制。
+  - 省份模式下未勾选任何省份 → 拒绝全部公网访问（fail-closed），内网仍放行。
 - **拦截点**（`server/proxy/`）：
-  - `base.go:IsForeignIp()` 为统一判定入口；`DealClient` 覆盖 tcp / httpProxy / socks5 / tcpTrans。
+  - `base.go:IsRegionRestricted()` 为统一判定入口；`DealClient` 覆盖 tcp / httpProxy / socks5 / tcpTrans。
   - `http.go:handleHttp` 覆盖域名模式（http/https）。
   - `udp.go` 覆盖 UDP 转发。
   - `websocket.go:HttpReverseProxy.ServeHTTP` 覆盖 WebSocket（该链路不经过 `DealClient`，需单独判定）。
+  - `base.go:IsForeignIp()` 只对应模式 1，保留给既有调用与测试。
+- **配置快照**：`lib/file/global.go` 的 `RegionLimit` + `regionLimitCache`（`atomic.Value`），
+  在 `SaveGlobal` / `LoadGlobalFromJsonFile` / `MigrateGlobalFromAppConfig` 时重建，避免每来一个连接都复制切片、构造 map。
 - **注意**：`net.ParseIP` / `net.IPv4` 返回 16 字节表示，IPv4 字节在 12-15 位。
   自行取字节时必须先 `To4()`，否则会读到全零前缀。掩码计算也不能写成 `^uint32(0) << n`
   （常量溢出），必须先赋给变量再移位。
@@ -61,9 +84,9 @@ Web 后台「全局参数 → 安全设置 → 禁止国外 IP 访问」开关�
 ### 境外 IP 自动加入全局黑名单
 
 Web 后台「全局参数 → 安全设置 → 境外 IP 自动加入黑名单」开关（`global.json` 的 `AutoBlockForeignIp`）。
-**依赖**「禁止国外 IP 访问」开关（`BlockForeignIp`）——主开关关闭时本开关不产生任何效果。
+**依赖**「仅禁止境外 IP」模式（`RegionLimitMode` = 1）——其他模式下本开关不产生任何效果。
 
-- **触发点**：`server/proxy/base.go:IsForeignIp()` 确认是境外 IP 之后调用
+- **触发点**：`server/proxy/base.go:blockForeignIp()` 确认是境外 IP 之后调用
   `file.GetDb().AddGlobalBlackIp(ip)`，追加到 `global.BlackIpList` 并立即落盘 `conf/global.json`。
 - **入口 API**（`lib/file/global.go`）：
   - `AddGlobalBlackIp(ip) bool` — 去重后追加并落盘；已存在或达到 `MaxGlobalBlackIpCount`（10000）时返回 false。
@@ -84,7 +107,7 @@ Web 后台「全局参数 → 安全设置 → 境外 IP 自动加入黑名单�
 `BarkQuietStart` / `BarkQuietEnd`）。
 
 - **触发点**：IP 被加入全局黑名单时推送通知。
-  - 自动拉黑：`server/proxy/base.go:IsForeignIp` → `AddGlobalBlackIp` 返回 true → `notify.NotifyBlackIpAdded(ip, "境外 IP 自动拦截")`
+  - 自动拉黑：`server/proxy/base.go:blockForeignIp` → `AddGlobalBlackIp` 返回 true → `notify.NotifyBlackIpAdded(ip, "境外 IP 自动拦截")`
   - 手动添加：Web 后台保存全局参数时对比新旧黑名单 → `notify.NotifyBlackIpBatchAdded(added, "Web 后台手动添加")`
 - **推送方式**：POST JSON 到 Bark 地址（`https://api.day.app/<key>`，自建服务器同格式）。
   发送在独立 goroutine 中异步执行，**失败只记日志、绝不 panic**，不阻塞转发主链路。

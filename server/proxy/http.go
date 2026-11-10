@@ -177,8 +177,8 @@ reset:
 		return
 	}
 
-	// 判断是否开启了「禁止国外 IP 访问」
-	if IsForeignIp(c.RemoteAddr().String()) {
+	// 判断访问来源是否被「访问地区限制」拦截
+	if IsRegionRestricted(c.RemoteAddr().String()) {
 		c.Close()
 		return
 	}

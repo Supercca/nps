@@ -266,7 +266,15 @@ type Glob struct {
 	SystemInfoDisplay       *bool   `json:"SystemInfoDisplay,omitempty"`
 	HttpAddOriginHeader     *bool   `json:"HttpAddOriginHeader,omitempty"`
 	// BlockForeignIp 为 true 时，服务端拒绝来自中国大陆 IP 段以外的访问。
+	// 该字段已被 RegionLimitMode 取代，仅作为历史兼容保留：
+	// 读取时 RegionLimitMode 为空时会回退读取它，保存时由 RegionLimitMode 同步写回。
 	BlockForeignIp *bool `json:"BlockForeignIp,omitempty"`
+	// RegionLimitMode 控制「访问地区限制」的强度：
+	//   0 = 不限制；1 = 仅禁止境外 IP；2 = 仅允许所选省份访问。
+	RegionLimitMode *int `json:"RegionLimitMode,omitempty"`
+	// AllowedProvinces 保存省份模式（RegionLimitMode = 2）下允许访问的
+	// 省级行政区，使用规范中文简称，例如 ["广东", "浙江"]。
+	AllowedProvinces []string `json:"AllowedProvinces,omitempty"`
 	// AutoBlockForeignIp 为 true 时，把被判定为境外的 IP 自动追加到全局黑名单。
 	// 仅在 BlockForeignIp 开启时生效。
 	AutoBlockForeignIp *bool `json:"AutoBlockForeignIp,omitempty"`

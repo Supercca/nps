@@ -132,6 +132,8 @@ func (s *DbUtils) UpdateTask(t *Tunnel) error {
 func (s *DbUtils) SaveGlobal(t *Glob) error {
 	s.JsonDb.Global = t
 	s.JsonDb.StoreGlobalToJsonFile()
+	// 重建地区限制快照，保存后新的限制立即对流量生效。
+	refreshRegionLimit(t)
 	return nil
 }
 
