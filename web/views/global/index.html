@@ -365,6 +365,32 @@
                             </div>
                             <span class="help-block m-b-none" langtag="info-autorestartweekdaystips"></span>
                         </div>
+
+                        <div class="setting-field" id="data_backup">
+                            <label langtag="word-backupdata"></label>
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <button class="btn btn-primary" type="button" id="btnDownloadBackup"
+                                            onclick="downloadBackup()">
+                                        <i class="fa fa-fw fa-download"></i> <span langtag="word-downloadbackup"></span>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="row" style="margin-top: 10px;">
+                                <div class="col-sm-8">
+                                    <input type="file" id="backupFile" accept=".zip,application/zip"
+                                           class="form-control" placeholder="&nbsp;">
+                                </div>
+                                <div class="col-sm-4">
+                                    <button class="btn btn-danger" type="button" id="btnRestoreBackup"
+                                            onclick="restoreBackup(this)">
+                                        <i class="fa fa-fw fa-upload"></i> <span langtag="word-restorebackup"></span>
+                                    </button>
+                                </div>
+                            </div>
+                            <span class="help-block m-b-none" langtag="info-backupdatatips"></span>
+                            <span class="help-block m-b-none" langtag="info-restoretips"></span>
+                        </div>
                     </div>
                 </div>
                 {{end}}
@@ -647,6 +673,59 @@
             error: function () {
                 // 请求被掐断说明进程正在退出，同样进入轮询
                 setTimeout(function () { pollRestart('-1', 0); }, 3000);
+            }
+        });
+    }
+
+    // 读取主词条文本（languages.xml 里 <lang id="..."> 的当前语言值）
+    function langText(id) {
+        var obj = (languages && languages['content']) ? languages['content'][id] : null;
+        if (!obj) return id;
+        if (typeof obj === 'string') return obj;
+        return obj[languages['current']] || obj[languages['default']] || id;
+    }
+
+    // 下载备份：直接让浏览器访问下载接口，服务端返回 zip 附件
+    function downloadBackup() {
+        window.location.href = window.nps.web_base_url + '/global/backup';
+    }
+
+    // 恢复备份：上传 zip 包 -> POST /global/restore
+    function restoreBackup(btn) {
+        var input = document.getElementById('backupFile');
+        if (!input || !input.files || input.files.length === 0) {
+            alert(langreply('selectbackupfile'));
+            return;
+        }
+        var f = input.files[0];
+        if (f.size > 32 * 1024 * 1024) {
+            alert(langreply('backupfiletoolarge'));
+            return;
+        }
+        var confirmObj = (languages && languages['content'] && languages['content']['confirm']) ? languages['content']['confirm']['restore'] : null;
+        var confirmMsg = (confirmObj && (confirmObj[languages['current']] || confirmObj[languages['default']])) || 'Overwrite the current data with this backup?';
+        if (!confirm(confirmMsg)) return;
+
+        var fd = new FormData();
+        fd.append('file', f);
+        var $btn = $(btn).prop('disabled', true);
+        $.ajax({
+            type: 'POST',
+            url: window.nps.web_base_url + '/global/restore',
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function (res) {
+                $btn.prop('disabled', false);
+                if (res && res.status) {
+                    alert(langreply('restoresuccess') + '\n' + langText('word-restartneeded'));
+                } else {
+                    alert((res && res.detail) ? res.detail : langreply('restorefailed'));
+                }
+            },
+            error: function () {
+                $btn.prop('disabled', false);
+                alert(langreply('restorefailed'));
             }
         });
     }

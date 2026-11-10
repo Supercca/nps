@@ -1,6 +1,8 @@
 package controllers
 
 import (
+	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -142,6 +144,111 @@ func (s *GlobalController) Restart() {
 // 仍会返回旧 PID，前端据此继续等待，避免把未重启误判为已恢复。
 func (s *GlobalController) RestartPid() {
 	s.Ctx.WriteString(strconv.Itoa(os.Getpid()))
+}
+
+// maxBackupUploadSize 是允许上传的备份包大小上限。
+//
+// 备份包本质上就是几份 JSON 的压缩，体积很小；这里限制得比较紧，
+// 避免超大上传把服务内存撑爆。
+const maxBackupUploadSize = 32 << 20
+
+// backupAdminOnly 校验管理员身份。
+//
+// 备份包里含有全部客户端的 vkey 与 Web 登录口令，且恢复会整体覆盖业务数据，
+// 因此这两个接口必须只对管理员开放。
+func (s *GlobalController) backupAdminOnly() bool {
+	if isAdmin, ok := s.GetSession("isAdmin").(bool); ok && isAdmin {
+		return true
+	}
+	s.AjaxErr("only admin can backup data")
+	return false
+}
+
+// backupFail 统一返回恢复失败的结果。
+//
+// detail 里放具体原因（例如版本不兼容、缺少文件），由前端直接展示。
+func (s *GlobalController) backupFail(detail string) {
+	s.Data["json"] = map[string]interface{}{
+		"status": 0,
+		"msg":    "restore failed",
+		"detail": detail,
+	}
+	s.ServeJSON()
+	s.StopRun()
+}
+
+// Backup 把当前全部业务数据（客户端、隧道、域名解析、全局参数）打包成 zip 供下载。
+//
+// GET /global/backup
+//
+// 下载前会先把内存中的数据落盘，保证备份内容与 conf 目录一致。
+func (s *GlobalController) Backup() {
+	if !s.backupAdminOnly() {
+		return
+	}
+	data, err := file.GetDb().JsonDb.CreateBackup()
+	if err != nil {
+		logs.Error("create backup failed:", err)
+		s.AjaxErr("backup failed: " + err.Error())
+		return
+	}
+	filename := fmt.Sprintf("nps-backup-%s.zip", time.Now().Format("20060102-150405"))
+	s.Ctx.Output.Header("Content-Type", "application/zip")
+	s.Ctx.Output.Header("Content-Disposition", `attachment; filename="`+filename+`"`)
+	// Body 会直接写出响应并标记 ResponseWriter 已开始，beego 不会再渲染模板。
+	s.Ctx.Output.Body(data)
+}
+
+// Restore 从上传的 zip 备份包恢复数据。
+//
+// POST /global/restore   （multipart/form-data，字段名 file）
+//
+// 恢复流程：校验版本与结构 -> 自动备份当前数据 -> 覆盖数据文件 -> 重新加载内存。
+// 覆盖前会在 conf/backup/ 留一份当前数据的备份，出问题可以手工换回去。
+// 恢复后需要重启服务，正在运行的隧道才会按新数据重建。
+func (s *GlobalController) Restore() {
+	if !s.backupAdminOnly() {
+		return
+	}
+	f, fh, err := s.GetFile("file")
+	if err != nil {
+		s.backupFail("no backup file uploaded")
+		return
+	}
+	defer f.Close()
+	if fh.Size > maxBackupUploadSize {
+		s.backupFail("backup file is too large")
+		return
+	}
+	data, err := io.ReadAll(io.LimitReader(f, maxBackupUploadSize+1))
+	if err != nil {
+		s.backupFail("read backup file failed: " + err.Error())
+		return
+	}
+	if len(data) > maxBackupUploadSize {
+		s.backupFail("backup file is too large")
+		return
+	}
+
+	result, err := file.GetDb().JsonDb.RestoreBackup(data)
+	if err != nil {
+		logs.Error("restore backup failed:", err)
+		s.backupFail(err.Error())
+		return
+	}
+	logs.Info("restore backup success, previous data saved to", result.BackupPath)
+	s.Data["json"] = map[string]interface{}{
+		"status":     1,
+		"msg":        "restore success",
+		"detail":     result.BackupPath,
+		"clients":    result.ClientCount,
+		"tasks":      result.TaskCount,
+		"hosts":      result.HostCount,
+		"createdAt":  result.Manifest.CreatedAt,
+		"npsVersion": result.Manifest.NPSVersion,
+	}
+	s.ServeJSON()
+	s.StopRun()
 }
 
 // hiddenMenusParam 读取被隐藏的菜单列表。

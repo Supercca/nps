@@ -482,6 +482,34 @@
 		<zh-CN>重启 nps 服务端进程，使 nps.conf 等启动级配置生效。重启期间面板与所有隧道会短暂中断，完成后页面自动恢复。</zh-CN>
 		<en-US>Restart the nps server process to apply startup-level settings in nps.conf. The panel and all tunnels will be briefly unavailable, the page reloads automatically when the service is back.</en-US>
 	</lang>
+	<lang id="word-backupdata">
+		<zh-CN>配置备份与恢复</zh-CN>
+		<en-US>Configuration Backup &amp; Restore</en-US>
+	</lang>
+	<lang id="info-backupdatatips">
+		<zh-CN>一键把客户端、隧道、域名与全局配置打包成 zip 下载，迁移服务器时无需再手工拷贝 conf 目录。</zh-CN>
+		<en-US>Download clients, tunnels, hosts and global settings as a single zip file, so migrating servers no longer requires copying the conf directory by hand.</en-US>
+	</lang>
+	<lang id="word-downloadbackup">
+		<zh-CN>下载备份</zh-CN>
+		<en-US>Download Backup</en-US>
+	</lang>
+	<lang id="word-restorebackup">
+		<zh-CN>恢复备份</zh-CN>
+		<en-US>Restore Backup</en-US>
+	</lang>
+	<lang id="info-restoretips">
+		<zh-CN>上传之前下载的 zip 备份包即可恢复数据。恢复前会自动把当前数据备份到 conf/backup/ 目录（保留最近 10 份），版本或结构校验不通过时会拒绝恢复。</zh-CN>
+		<en-US>Upload a previously downloaded zip backup to restore the data. The current data is saved to the conf/backup/ directory (the latest 10 copies are kept) before being overwritten, and the restore is rejected when the version or structure check fails.</en-US>
+	</lang>
+	<lang id="word-selectbackupfile">
+		<zh-CN>选择备份文件</zh-CN>
+		<en-US>Choose backup file</en-US>
+	</lang>
+	<lang id="word-restartneeded">
+		<zh-CN>恢复完成，请重启服务使隧道按新数据重建。</zh-CN>
+		<en-US>Restore finished. Please restart the service so that tunnels are rebuilt from the new data.</en-US>
+	</lang>
 	<lang id="word-autorestart">
 		<zh-CN>定时重启服务</zh-CN>
 		<en-US>Scheduled Restart</en-US>
@@ -955,6 +983,10 @@
 			<zh-CN>请先选择要删除的项目！</zh-CN>
 			<en-US>Please select items to delete!</en-US>
 		</lang>
+		<lang id="restore">
+			<zh-CN>你确定要使用该备份包覆盖当前数据吗？当前数据会先自动备份到 conf/backup/ 目录。</zh-CN>
+			<en-US>Are you sure you want to overwrite the current data with this backup? The current data is saved to the conf/backup/ directory first.</en-US>
+		</lang>
 	</confirm>
 
 	<reply>
@@ -1041,6 +1073,26 @@
 		<lang id="onlyadmincanresetclientflow">
 			<zh-CN>只有管理员可以重置客户端流量</zh-CN>
 			<en-US>Only admin can reset client flow</en-US>
+		</lang>
+		<lang id="restorefailed">
+			<zh-CN>恢复失败</zh-CN>
+			<en-US>Restore failed</en-US>
+		</lang>
+		<lang id="restoresuccess">
+			<zh-CN>恢复成功</zh-CN>
+			<en-US>Restore success</en-US>
+		</lang>
+		<lang id="selectbackupfile">
+			<zh-CN>请先选择备份文件</zh-CN>
+			<en-US>Please select a backup file first</en-US>
+		</lang>
+		<lang id="backupfiletoolarge">
+			<zh-CN>备份文件过大</zh-CN>
+			<en-US>The backup file is too large</en-US>
+		</lang>
+		<lang id="onlyadmincanbackupdata">
+			<zh-CN>只有管理员可以备份与恢复数据</zh-CN>
+			<en-US>Only admin can back up and restore data</en-US>
 		</lang>
 	</reply>
 
