@@ -17,6 +17,7 @@ import (
 	"ehang.io/nps/lib/version"
 	"ehang.io/nps/server"
 	"github.com/astaxie/beego"
+	"github.com/astaxie/beego/logs"
 )
 
 type LoginController struct {
@@ -154,11 +155,14 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 		}
 	}
 	var auth bool
+	// loginUser 记录本次登录的用户名，用于登录成功日志。
+	loginUser := ""
 	if password == beego.AppConfig.String("web_password") && username == beego.AppConfig.String("web_username") {
 		self.SetSession("isAdmin", true)
 		self.DelSession("clientId")
 		self.DelSession("username")
 		auth = true
+		loginUser = beego.AppConfig.String("web_username")
 		server.Bridge.Register.Store(common.GetIpByAddr(self.Ctx.Input.IP()), time.Now().Add(time.Hour*time.Duration(2)))
 	}
 	allowUserLogin := file.GetDb().GetGlobalSettings().AllowUserLogin
@@ -182,6 +186,7 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 				self.SetSession("isAdmin", false)
 				self.SetSession("clientId", v.Id)
 				self.SetSession("username", v.WebUserName)
+				loginUser = v.WebUserName
 				return false
 			}
 			return true
@@ -190,6 +195,22 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 	if auth {
 		self.SetSession("auth", true)
 		ipRecord.Delete(ip)
+		// 记录本次登录的来源 IP，便于事后追溯是谁、从哪登录的。
+		// 只有显式提交密码的登录才记录：隐式登录（打开登录页时自动登录）
+		// 每次访问都会触发，记下来会刷屏。
+		if explicit {
+			loginIP := self.Ctx.Request.RemoteAddr
+			if host, _, err := net.SplitHostPort(loginIP); err == nil {
+				loginIP = host
+			}
+			// 面板若挂在反向代理后面，对端地址只是代理，
+			// 真实来源在 X-Forwarded-For 里，一并记下来便于追溯。
+			if xff := strings.TrimSpace(self.Ctx.Input.Header("X-Forwarded-For")); xff != "" {
+				loginIP = fmt.Sprintf("%s (X-Forwarded-For: %s)", loginIP, xff)
+			}
+			logs.Info("面板登录成功: 用户[%s] IP[%s]", loginUser, loginIP)
+			notifyLoginSuccess(loginUser, loginIP)
+		}
 		// 登录成功，但来源省份不在允许列表内 —— 面板是直接对外暴露的，
 		// 不经过隧道代理，因此不受「访问地区限制」拦截，这里只做告警。
 		notifyLoginFromUnexpectedProvince(ip)
@@ -212,6 +233,20 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 		}
 	}
 	return false
+}
+
+// notifyLoginSuccess 在「登录成功推送通知」开关打开时，推送一条含来源 IP 的通知。
+//
+// 登录成功是低频事件，正常不需要限流；但用户自己反复登录时可能刷屏，
+// 因此复用面板告警限流器（不同 key 前缀，不与失败/省份告警互相抢占额度）。
+// 这里用 Allow 而不是 Log：日志已由调用方写过，这里只判断要不要推送。
+func notifyLoginSuccess(username, ip string) {
+	if !file.GetDb().GetGlobalSettings().LoginSuccessNotify {
+		return
+	}
+	if loginAlertLog.Allow("loginsuccess:"+ip) {
+		notify.NotifyLoginSuccess(username, ip)
+	}
 }
 
 // notifyLoginFromUnexpectedProvince 在「仅允许指定省份访问」模式下，

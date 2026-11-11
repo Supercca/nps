@@ -37,6 +37,8 @@ type GlobalSettings struct {
 	AllowedProvinces []string
 	// LoginFailAlertThreshold 是面板登录失败告警阈值，0 表示不告警。
 	LoginFailAlertThreshold int
+	// LoginSuccessNotify 为 true 时，登录成功会推送一条 Bark 通知（含来源 IP）。
+	LoginSuccessNotify bool
 	// AutoBlockForeignIp 为 true 时，把判定为境外的 IP 自动追加到全局黑名单。
 	// 仅在 BlockForeignIp 开启时生效。
 	AutoBlockForeignIp bool
@@ -353,6 +355,7 @@ func (s *DbUtils) GetGlobalSettings() GlobalSettings {
 	if global.LoginFailAlertThreshold != nil {
 		settings.LoginFailAlertThreshold = *global.LoginFailAlertThreshold
 	}
+	settings.LoginSuccessNotify = boolPtrValue(global.LoginSuccessNotify)
 	settings.AutoBlockForeignIp = boolPtrValue(global.AutoBlockForeignIp)
 	settings.BarkEnabled = boolPtrValue(global.BarkEnabled)
 	settings.BarkUrl = stringPtrValue(global.BarkUrl)
@@ -473,6 +476,11 @@ func (s *DbUtils) MigrateGlobalFromAppConfig() {
 	// 面板登录失败告警阈值。
 	if global.LoginFailAlertThreshold == nil {
 		global.LoginFailAlertThreshold = intPtr(DefaultLoginFailAlertThreshold)
+		changed = true
+	}
+	// 登录成功 Bark 通知开关，默认关闭。
+	if global.LoginSuccessNotify == nil {
+		global.LoginSuccessNotify = boolPtr(appConfigBool("login_success_notify", false))
 		changed = true
 	}
 	if global.AutoBlockForeignIp == nil {

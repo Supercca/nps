@@ -53,6 +53,7 @@ func (s *GlobalController) Index() {
 	s.Data["autoBlockForeignIp"] = settings.AutoBlockForeignIp
 	s.Data["regionLimitMode"] = settings.RegionLimitMode
 	s.Data["loginFailAlertThreshold"] = settings.LoginFailAlertThreshold
+	s.Data["loginSuccessNotify"] = settings.LoginSuccessNotify
 	s.Data["provinceGroups"] = provinceOptionsWithState(settings.AllowedProvinces)
 	provinceDb := geo.ProvinceDBStatus()
 	if provinceDb.Path == "" {
@@ -117,6 +118,7 @@ func (s *GlobalController) Save() {
 	global.BlockForeignIp = globalBoolPtr(regionLimitMode == file.RegionLimitModeBlockForeign)
 	global.AllowedProvinces = filterProvinces(s.provincesParam())
 	global.LoginFailAlertThreshold = globalIntPtr(filterLoginFailThreshold(s.GetIntNoErr("loginFailAlertThreshold")))
+	global.LoginSuccessNotify = globalBoolPtr(s.GetBoolNoErr("loginSuccessNotify"))
 	global.AutoBlockForeignIp = globalBoolPtr(s.GetBoolNoErr("autoBlockForeignIp"))
 	global.BarkEnabled = globalBoolPtr(s.GetBoolNoErr("barkEnabled"))
 	global.BarkUrl = globalStringPtr(strings.TrimSpace(s.getEscapeString("barkUrl")))

@@ -372,6 +372,23 @@
                             </div>
                         </div>
 
+                        <div class="setting-row" id="login_success_notify">
+                            <div class="setting-main">
+                                <div class="setting-title" langtag="word-loginsuccessnotify"></div>
+                                <div class="setting-desc" langtag="info-loginsuccessnotifytips"></div>
+                            </div>
+                            <div class="setting-control">
+                                <div class="onoffswitch">
+                                    <input type="checkbox" name="loginSuccessNotify" value="1" class="onoffswitch-checkbox"
+                                           id="loginSuccessNotify" {{if .loginSuccessNotify}}checked{{end}}>
+                                    <label class="onoffswitch-label" for="loginSuccessNotify">
+                                        <span class="onoffswitch-inner"></span>
+                                        <span class="onoffswitch-switch"></span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="setting-field" id="bark_url">
                             <label langtag="word-barkurl"></label>
                             <input class="form-control" value="{{.barkUrl}}" type="text" name="barkUrl"

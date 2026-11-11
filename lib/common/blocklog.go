@@ -82,6 +82,44 @@ func (l *BlockLogLimiter) LogError(key, msg string) bool {
 	return l.log("error", key, msg)
 }
 
+// Allow 只做限流判断，不写任何日志。
+//
+// 用于「日志已经由调用方自己写过、这里只想决定要不要额外做一次推送」的场景，
+// 例如登录成功：日志里已经记了一条 Info，这里只是判断要不要发通知，
+// 不应该因为限流器又额外写一条 Warn 日志造成重复。
+//
+// 语义与 log 一致：同一 key 在冷却期内返回 false，全局额度用尽也返回 false。
+func (l *BlockLogLimiter) Allow(key string) bool {
+	now := time.Now()
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	// 补充令牌
+	if elapsed := now.Sub(l.lastFill).Minutes(); elapsed > 0 {
+		l.tokens += elapsed * l.ratePerMinute
+		if l.tokens > l.ratePerMinute {
+			l.tokens = l.ratePerMinute
+		}
+		l.lastFill = now
+	}
+	// 同一来源的冷却期
+	if last, ok := l.last[key]; ok && now.Sub(last) < l.cooldown {
+		l.skipped[key]++
+		return false
+	}
+	// 全局限速
+	if l.tokens < 1 {
+		l.globalSkipped++
+		return false
+	}
+	l.tokens--
+	l.last[key] = now
+	if len(l.last) > l.maxKeys {
+		l.evictLocked(now)
+	}
+	return true
+}
+
 // log 是两种级别的公共实现。
 func (l *BlockLogLimiter) log(level, key, msg string) bool {
 	now := time.Now()

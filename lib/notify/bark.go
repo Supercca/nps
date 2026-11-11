@@ -148,6 +148,14 @@ func NotifyScheduledRestart(runAt time.Time) {
 	SendBark("NPS 服务端定时重启", body)
 }
 
+// NotifyLoginSuccess 通知「面板登录成功」。
+// ip 是本次登录的来源地址，username 是登录的用户名。
+func NotifyLoginSuccess(username, ip string) {
+	body := fmt.Sprintf("用户: %s\n来源 IP: %s\n时间: %s",
+		username, ip, time.Now().Format("2006-01-02 15:04:05"))
+	SendBark("NPS 面板登录成功", body)
+}
+
 // NotifyLoginFail 通知「面板登录失败次数达到阈值」。
 // ip 是来源地址，times 是统计窗口内的累计失败次数。
 func NotifyLoginFail(ip string, times int) {

@@ -279,6 +279,9 @@ type Glob struct {
 	// 同一来源 IP 在统计窗口内登录失败达到该次数时推送一条告警。
 	// 0 表示不告警。
 	LoginFailAlertThreshold *int `json:"LoginFailAlertThreshold,omitempty"`
+	// LoginSuccessNotify 为 true 时，面板登录成功会推送一条 Bark 通知，
+	// 通知内容包含本次登录的来源 IP。默认关闭，避免频繁登录刷屏。
+	LoginSuccessNotify *bool `json:"LoginSuccessNotify,omitempty"`
 	// AutoBlockForeignIp 为 true 时，把被判定为境外的 IP 自动追加到全局黑名单。
 	// 仅在 BlockForeignIp 开启时生效。
 	AutoBlockForeignIp *bool `json:"AutoBlockForeignIp,omitempty"`

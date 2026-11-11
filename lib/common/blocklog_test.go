@@ -74,3 +74,23 @@ func TestBlockLogLimiterEvict(t *testing.T) {
 		t.Errorf("记录的来源数 = %d, 期望不超过 %d", tracked, l.maxKeys)
 	}
 }
+
+// TestBlockLogLimiterAllow Allow 只判断限流，不写日志。
+func TestBlockLogLimiterAllow(t *testing.T) {
+	l := NewBlockLogLimiter(time.Minute, 2)
+
+	if !l.Allow("login:1.2.3.4") {
+		t.Fatal("首次 Allow 应放行")
+	}
+	// 同一 key 在冷却期内不再放行。
+	if l.Allow("login:1.2.3.4") {
+		t.Error("冷却期内不应放行同一个 key")
+	}
+	if !l.Allow("login:5.6.7.8") {
+		t.Error("不同来源不应被冷却影响")
+	}
+	// 全局额度用尽后不再放行。
+	if l.Allow("login:9.9.9.9") {
+		t.Error("超出全局额度后不应放行")
+	}
+}

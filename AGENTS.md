@@ -173,6 +173,15 @@ IP 库未覆盖的段都会命中），UDP 链路更是**每收到一个包就�
   （`loginAlertLog`），不与代理侧的 `common.BlockLog` 共用预算——
   被暴力破解时来源 IP 可能很多，既不能把推送服务打爆，
   也不能让代理侧的日志洪水把登录告警挤掉。只有真正写出的那条日志才推送通知。
+- **登录成功记录来源 IP**：登录成功（仅显式提交密码的登录）会往服务端日志写一条
+  `面板登录成功: 用户[x] IP[y]`，日志可在「日志」页面查看。
+  面板挂在反向代理后面时，除对端地址外一并记录 `X-Forwarded-For`，便于追溯真实来源。
+- **登录成功通知开关**：`global.json` 的 `LoginSuccessNotify`（默认关闭）。
+  打开后每次成功登录推送一条含来源 IP 的 Bark 通知（`notify.NotifyLoginSuccess`）。
+  这里用 `loginAlertLog.Allow(key)` 而不是 `Log`：日志已由登录流程写过一条 Info，
+  `Allow` 只判断要不要推送、不额外写日志，避免同一次登录在日志里出现两条。
+  `common.BlockLogLimiter.Allow` 与 `Log` 的限流语义一致（同一 key 冷却 + 全局令牌桶），
+  但不写日志、不累计「未记录条数」。
 
 ## Bark 通知与菜单定制
 
