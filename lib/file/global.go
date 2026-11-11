@@ -35,6 +35,8 @@ type GlobalSettings struct {
 	RegionLimitMode int
 	// AllowedProvinces 是省份模式下允许访问的省级行政区（规范中文简称）。
 	AllowedProvinces []string
+	// LoginFailAlertThreshold 是面板登录失败告警阈值，0 表示不告警。
+	LoginFailAlertThreshold int
 	// AutoBlockForeignIp 为 true 时，把判定为境外的 IP 自动追加到全局黑名单。
 	// 仅在 BlockForeignIp 开启时生效。
 	AutoBlockForeignIp bool
@@ -58,6 +60,12 @@ type GlobalSettings struct {
 // MaxGlobalBlackIpCount 是全局黑名单的最大条目数。
 // 自动拉黑时超过该上限就不再追加，避免被大量境外 IP 撑爆内存与 global.json。
 const MaxGlobalBlackIpCount = 10000
+
+// DefaultLoginFailAlertThreshold 是面板登录失败告警的默认阈值。
+const DefaultLoginFailAlertThreshold = 5
+
+// MaxLoginFailAlertThreshold 是面板登录失败告警阈值的上限。
+const MaxLoginFailAlertThreshold = 100
 
 // 「访问地区限制」的三个模式。
 const (
@@ -341,6 +349,10 @@ func (s *DbUtils) GetGlobalSettings() GlobalSettings {
 	if len(global.AllowedProvinces) > 0 {
 		settings.AllowedProvinces = append([]string(nil), global.AllowedProvinces...)
 	}
+	settings.LoginFailAlertThreshold = DefaultLoginFailAlertThreshold
+	if global.LoginFailAlertThreshold != nil {
+		settings.LoginFailAlertThreshold = *global.LoginFailAlertThreshold
+	}
 	settings.AutoBlockForeignIp = boolPtrValue(global.AutoBlockForeignIp)
 	settings.BarkEnabled = boolPtrValue(global.BarkEnabled)
 	settings.BarkUrl = stringPtrValue(global.BarkUrl)
@@ -456,6 +468,11 @@ func (s *DbUtils) MigrateGlobalFromAppConfig() {
 	// 访问地区限制模式：历史配置里只有 BlockForeignIp，迁移成「仅禁止境外 IP」。
 	if global.RegionLimitMode == nil {
 		global.RegionLimitMode = intPtr(regionLimitModeOf(global))
+		changed = true
+	}
+	// 面板登录失败告警阈值。
+	if global.LoginFailAlertThreshold == nil {
+		global.LoginFailAlertThreshold = intPtr(DefaultLoginFailAlertThreshold)
 		changed = true
 	}
 	if global.AutoBlockForeignIp == nil {

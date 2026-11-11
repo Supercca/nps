@@ -6,11 +6,11 @@ rem ============================================================
 rem  Build NPS server release package for windows/amd64
 rem  Usage:
 rem     build_windows_amd64_server.bat            use default version
-rem     build_windows_amd64_server.bat 0.26.107    override version
+rem     build_windows_amd64_server.bat 0.26.108    override version
 rem  Output: windows_amd64_server.tar.gz
 rem ============================================================
 
-set "VERSION=0.26.107"
+set "VERSION=0.26.108"
 set "PKG=windows_amd64_server"
 rem PACK_CONF=0  ship the nps.exe binary only, conf is generated on first run
 rem PACK_CONF=1  also ship conf/nps.conf and conf/global.json templates

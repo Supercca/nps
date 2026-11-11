@@ -147,3 +147,25 @@ func NotifyScheduledRestart(runAt time.Time) {
 		runAt.Format("2006-01-02 15:04"))
 	SendBark("NPS 服务端定时重启", body)
 }
+
+// NotifyLoginFail 通知「面板登录失败次数达到阈值」。
+// ip 是来源地址，times 是统计窗口内的累计失败次数。
+func NotifyLoginFail(ip string, times int) {
+	body := fmt.Sprintf("来源 IP: %s\n失败次数: %d\n时间: %s",
+		ip, times, time.Now().Format("2006-01-02 15:04:05"))
+	SendBark("NPS 面板登录失败告警", body)
+}
+
+// NotifyLoginFromUnexpectedProvince 通知「面板登录来源的省份不在允许列表内」。
+//
+// 面板是直接对外暴露的，不经过隧道代理，因此不受「访问地区限制」的拦截，
+// 这里只做告警：province 是来源 IP 所属省份，allowed 是当前允许的省份列表。
+func NotifyLoginFromUnexpectedProvince(ip, province string, allowed []string) {
+	allowedText := strings.Join(allowed, "、")
+	if allowedText == "" {
+		allowedText = "（未设置）"
+	}
+	body := fmt.Sprintf("来源 IP: %s\n所在省份: %s\n允许省份: %s\n时间: %s",
+		ip, province, allowedText, time.Now().Format("2006-01-02 15:04:05"))
+	SendBark("NPS 面板异地登录告警", body)
+}

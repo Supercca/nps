@@ -275,6 +275,10 @@ type Glob struct {
 	// AllowedProvinces 保存省份模式（RegionLimitMode = 2）下允许访问的
 	// 省级行政区，使用规范中文简称，例如 ["广东", "浙江"]。
 	AllowedProvinces []string `json:"AllowedProvinces,omitempty"`
+	// LoginFailAlertThreshold 是面板登录失败告警阈值：
+	// 同一来源 IP 在统计窗口内登录失败达到该次数时推送一条告警。
+	// 0 表示不告警。
+	LoginFailAlertThreshold *int `json:"LoginFailAlertThreshold,omitempty"`
 	// AutoBlockForeignIp 为 true 时，把被判定为境外的 IP 自动追加到全局黑名单。
 	// 仅在 BlockForeignIp 开启时生效。
 	AutoBlockForeignIp *bool `json:"AutoBlockForeignIp,omitempty"`

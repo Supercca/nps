@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"fmt"
 	"github.com/astaxie/beego/cache"
 	"github.com/astaxie/beego/utils/captcha"
 	"math/rand"
@@ -11,6 +12,8 @@ import (
 
 	"ehang.io/nps/lib/common"
 	"ehang.io/nps/lib/file"
+	"ehang.io/nps/lib/geo"
+	"ehang.io/nps/lib/notify"
 	"ehang.io/nps/lib/version"
 	"ehang.io/nps/server"
 	"github.com/astaxie/beego"
@@ -20,12 +23,74 @@ type LoginController struct {
 	beego.Controller
 }
 
+// 面板登录失败的统计参数。
+const (
+	// loginFailWindow 是登录失败计数的统计窗口：
+	// 超过这个时间没有新的失败，计数就重新开始。
+	loginFailWindow = 60 * time.Second
+	// loginFailLockoutTimes 是触发临时锁定的失败次数。
+	loginFailLockoutTimes = 10
+)
+
 var ipRecord sync.Map
 var cpt *captcha.Captcha
 
-type record struct {
-	hasLoginFailTimes int
-	lastLoginTime     time.Time
+// loginAlertLog 是登录告警专用的日志限流器。
+//
+// 单独一个实例，不与代理层的拦截日志共用预算：
+// 被暴力破解时来源 IP 可能很多，需要独立限流，
+// 也不能让代理侧的日志洪水把登录告警挤掉。
+var loginAlertLog = common.NewBlockLogLimiter(time.Minute, 10)
+
+// loginFailRecord 记录某个来源 IP 的登录失败情况。
+//
+// 计数与时间戳都用互斥锁保护：多个并发登录请求会同时命中同一个 IP，
+// 裸字段累加会互相覆盖，导致锁定阈值形同虚设。
+type loginFailRecord struct {
+	mu        sync.Mutex
+	failTimes int
+	lastTime  time.Time
+	// alerted 表示本轮窗口内是否已经告警过，
+	// 避免同一个 IP 反复触发推送。
+	alerted bool
+}
+
+// expire 在距上次失败超过 window 后清零计数（并解除告警标记）。
+func (r *loginFailRecord) expire(now time.Time, window time.Duration) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if !r.lastTime.IsZero() && now.Sub(r.lastTime) >= window {
+		r.failTimes = 0
+		r.alerted = false
+	}
+}
+
+// locked 判断该 IP 是否已被临时锁定。
+func (r *loginFailRecord) locked(limit int) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.failTimes >= limit
+}
+
+// fail 记一次失败，返回累计失败次数，以及本轮窗口内是否首次达到告警阈值。
+// threshold <= 0 表示不告警。
+func (r *loginFailRecord) fail(now time.Time, threshold int) (int, bool) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.failTimes++
+	r.lastTime = now
+	shouldAlert := threshold > 0 && !r.alerted && r.failTimes >= threshold
+	if shouldAlert {
+		r.alerted = true
+	}
+	return r.failTimes, shouldAlert
+}
+
+// lastFailureTime 返回最后一次失败的时间。
+func (r *loginFailRecord) lastFailureTime() time.Time {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.lastTime
 }
 
 // InitCaptcha registers the captcha image route and the create_captcha template
@@ -82,11 +147,9 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 	clearIprecord()
 	ip, _, _ := net.SplitHostPort(self.Ctx.Request.RemoteAddr)
 	if v, ok := ipRecord.Load(ip); ok {
-		vv := v.(*record)
-		if (time.Now().Unix() - vv.lastLoginTime.Unix()) >= 60 {
-			vv.hasLoginFailTimes = 0
-		}
-		if vv.hasLoginFailTimes >= 10 {
+		vv := v.(*loginFailRecord)
+		vv.expire(time.Now(), loginFailWindow)
+		if vv.locked(loginFailLockoutTimes) {
 			return false
 		}
 	}
@@ -127,16 +190,69 @@ func (self *LoginController) doLogin(username, password string, explicit bool) b
 	if auth {
 		self.SetSession("auth", true)
 		ipRecord.Delete(ip)
+		// 登录成功，但来源省份不在允许列表内 —— 面板是直接对外暴露的，
+		// 不经过隧道代理，因此不受「访问地区限制」拦截，这里只做告警。
+		notifyLoginFromUnexpectedProvince(ip)
 		return true
 
 	}
-	if v, load := ipRecord.LoadOrStore(ip, &record{hasLoginFailTimes: 1, lastLoginTime: time.Now()}); load && explicit {
-		vv := v.(*record)
-		vv.lastLoginTime = time.Now()
-		vv.hasLoginFailTimes += 1
-		ipRecord.Store(ip, vv)
+	// 登录失败计数：只有显式提交了密码的失败才计入。
+	if explicit {
+		threshold := file.GetDb().GetGlobalSettings().LoginFailAlertThreshold
+		v, _ := ipRecord.LoadOrStore(ip, &loginFailRecord{})
+		vv := v.(*loginFailRecord)
+		times, shouldAlert := vv.fail(time.Now(), threshold)
+		if shouldAlert {
+			// 走限流器：被暴力破解时可能有大量来源 IP 同时触发告警，
+			// 不能把推送服务打爆；只有真正写出的那一条才推送通知。
+			if loginAlertLog.Log("loginfail:"+ip,
+				fmt.Sprintf("面板登录失败次数达到阈值: IP[%s] 累计失败 %d 次", ip, times)) {
+				notify.NotifyLoginFail(ip, times)
+			}
+		}
 	}
 	return false
+}
+
+// notifyLoginFromUnexpectedProvince 在「仅允许指定省份访问」模式下，
+// 检查登录来源 IP 所属省份是否在允许列表内，不在则推送一条告警。
+//
+// 查不到省份归属的情况（内网地址、IPv6、境外地址）不做判定，也不告警。
+func notifyLoginFromUnexpectedProvince(ip string) {
+	limit := file.GetDb().GetRegionLimit()
+	if limit.Mode != file.RegionLimitModeAllowProvinces {
+		return
+	}
+	netIP := net.ParseIP(ip)
+	if netIP == nil {
+		return
+	}
+	province := geo.LookupProvince(netIP)
+	if !shouldAlertLoginProvince(limit.Mode, limit.Allowed, province) {
+		return
+	}
+	allowed := file.GetDb().GetGlobalSettings().AllowedProvinces
+	// 与失败告警共用同一个限流器，但用不同的 key 前缀，互不抢占冷却额度。
+	if loginAlertLog.Log("loginprovince:"+ip,
+		fmt.Sprintf("面板登录来源省份不在允许列表内: IP[%s] 省份[%s]", ip, province)) {
+		notify.NotifyLoginFromUnexpectedProvince(ip, province, allowed)
+	}
+}
+
+// shouldAlertLoginProvince 判断是否需要为「登录来源省份不在允许列表内」告警。
+//
+// mode 是访问地区限制模式，allowed 是允许省份集合，province 是来源 IP 所属省份
+// （查不到归属时为空字符串）。
+func shouldAlertLoginProvince(mode int, allowed map[string]bool, province string) bool {
+	// 只有「仅允许指定省份访问」模式才需要判定。
+	if mode != file.RegionLimitModeAllowProvinces {
+		return false
+	}
+	// 查不到省份归属（内网、IPv6、境外）时不判定。
+	if province == "" {
+		return false
+	}
+	return !allowed[province]
 }
 func (self *LoginController) Register() {
 	if self.Ctx.Request.Method == "GET" {
@@ -180,8 +296,8 @@ func clearIprecord() {
 	x := rand.Intn(100)
 	if x == 1 {
 		ipRecord.Range(func(key, value interface{}) bool {
-			v := value.(*record)
-			if time.Now().Unix()-v.lastLoginTime.Unix() >= 60 {
+			v := value.(*loginFailRecord)
+			if time.Now().Unix()-v.lastFailureTime().Unix() >= 60 {
 				ipRecord.Delete(key)
 			}
 			return true

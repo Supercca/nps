@@ -1,4 +1,4 @@
-package proxy
+package common
 
 import (
 	"fmt"
@@ -64,9 +64,9 @@ func NewBlockLogLimiter(cooldown time.Duration, ratePerMinute int) *BlockLogLimi
 	}
 }
 
-// blockLogLimiter 是全局唯一的拦截日志限流器。
+// BlockLog 是全局唯一的拦截日志限流器。
 // 全局预算是共享的，因此各个拦截点必须共用这一个实例。
-var blockLogLimiter = NewBlockLogLimiter(blockLogCooldown, blockLogRatePerMinute)
+var BlockLog = NewBlockLogLimiter(blockLogCooldown, blockLogRatePerMinute)
 
 // Log 记录一条拦截日志（Warn 级别），返回是否真正写入了日志。
 //

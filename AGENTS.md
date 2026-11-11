@@ -128,8 +128,7 @@ Web 后台「全局参数 → 安全设置 → 境外 IP 自动加入黑名单�
   由 `common.IsBlackIp` / `common.IsAuthIp` 直接排序共享切片，是遗留的数据竞争，
   不在自动拉黑的影响范围内。
 
-### 拦截日志限流（`server/proxy/blocklog.go`）
-
+### 拦截日志限流（`lib/common/blocklog.go`）
 访问地区限制的拦截面比「禁止国外 IP」大得多（未勾选省份的国内 IP、全部境外 IP、
 IP 库未覆盖的段都会命中），UDP 链路更是**每收到一个包就判定一次**。
 不加限制的话被扫描时每秒能刷出几千条日志，撑爆日志文件、拖垮日志页轮询。
@@ -144,12 +143,36 @@ IP 库未覆盖的段都会命中），UDP 链路更是**每收到一个包就�
 
 - **接入点**：`server/proxy/base.go` 的 `IsGlobalBlackIp`（Error 级）、
   `blockForeignIp`、`blockNonAllowedProvince`。三处都必须用全局单例
-  `blockLogLimiter`，因为全局预算是共享的。
+  `common.BlockLog`，因为全局预算是共享的。
 - **Bark 通知**：自动拉黑的推送只在「那条日志真的写出去」时才发，
   否则被扫描时会有成千上万条推送把通知服务打爆。
 - **新增拦截日志时**：一律走 `blockLogLimiter.Log(key, msg)`，
   不要直接 `logs.Warn` / `logs.Error`。key 要带场景前缀（如 `province:`、`foreign:`），
   避免不同拦截点互相抢占冷却额度。
+
+### 面板登录告警（`web/controllers/login.go`）
+
+管理面板是直接对外暴露的，不经过隧道代理，因此**不受「访问地区限制」的拦截**。
+为了能及时发现有人在探测或异地登录，`doLogin` 里有两类告警（都走 Bark 推送）：
+
+- **登录失败告警**：同一来源 IP 在 `loginFailWindow`（60 秒）内登录失败达到
+  `LoginFailAlertThreshold`（`global.json`，默认 5，0 表示不告警）次时推送一条告警。
+  同一轮窗口内只告警一次，避免反复刷推送；登录成功或窗口过期后重新计数。
+- **异地登录告警**：开启了「仅允许指定省份访问」模式（`RegionLimitMode` = 2）时，
+  登录成功且来源 IP 所属省份**不在**允许列表里，就推送一条告警。
+  判定入口是 `shouldAlertLoginProvince(mode, allowed, province)`（纯函数，便于测试）；
+  查不到省份归属的情况（内网地址、IPv6、境外地址）不判定也不告警。
+
+- **失败计数的并发安全**：`loginFailRecord` 的计数与时间戳都用互斥锁保护。
+  原来的实现用裸字段 `vv.hasLoginFailTimes += 1` 累加，并发登录会互相覆盖，
+  锁定阈值形同虚设；现在用 `loginFailRecord.fail()` 加锁写入。
+- **只有显式提交密码的失败才计数**：打开登录页（隐式登录）不再计入失败次数。
+- 告警只是提醒，**不会阻断登录**；要按地区限制面板访问，
+  需要在前面加反向代理或改端口暴露策略。
+- **告警也走限流**：面板告警用 `common.NewBlockLogLimiter(time.Minute, 10)` 建的独立实例
+  （`loginAlertLog`），不与代理侧的 `common.BlockLog` 共用预算——
+  被暴力破解时来源 IP 可能很多，既不能把推送服务打爆，
+  也不能让代理侧的日志洪水把登录告警挤掉。只有真正写出的那条日志才推送通知。
 
 ## Bark 通知与菜单定制
 

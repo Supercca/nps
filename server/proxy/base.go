@@ -143,7 +143,7 @@ func IsGlobalBlackIp(ipPort string) bool {
 	// 不再复制整表 + 就地排序 + 二分，也就没有「查找时排序共享切片」的数据竞争。
 	if file.GetDb().IsGlobalBlackIp(ip) {
 		// 命中黑名单是「预期内」的拒绝，日志要限流，否则被扫时日志会被刷爆。
-		blockLogLimiter.LogError("blacklist:"+ip, "IP地址["+ip+"]在全局黑名单列表内")
+		common.BlockLog.LogError("blacklist:"+ip, "IP地址["+ip+"]在全局黑名单列表内")
 		return true
 	}
 
@@ -183,12 +183,12 @@ func blockForeignIp(ipPort string, limit file.RegionLimit) bool {
 		return false
 	}
 	// 日志限流：被扫描时同一个境外 IP 会反复触发，不能每条都写日志。
-	blockLogLimiter.Log("foreign:"+ip, "IP地址["+ip+"]属于境外地址，已按「禁止国外IP访问」策略拦截")
+	common.BlockLog.Log("foreign:"+ip, "IP地址["+ip+"]属于境外地址，已按「禁止国外IP访问」策略拦截")
 	if limit.AutoBlockForeign {
 		if file.GetDb().AddGlobalBlackIp(ip) {
 			// 只有真正写出了日志的那一条才推 Bark 通知，
 			// 否则被扫描时会有成千上万条推送把通知服务打爆。
-			if blockLogLimiter.Log("autoblock:"+ip, "IP地址["+ip+"]已自动加入全局黑名单") {
+			if common.BlockLog.Log("autoblock:"+ip, "IP地址["+ip+"]已自动加入全局黑名单") {
 				notify.NotifyBlackIpAdded(ip, "境外 IP 自动拦截")
 			}
 		}
@@ -219,13 +219,13 @@ func blockNonAllowedProvince(ipPort string, limit file.RegionLimit) bool {
 	}
 	province := geo.LookupProvince(netIP)
 	if province == "" {
-		blockLogLimiter.Log("province:"+ip, "IP地址["+ip+"]未归属任何中国省份，已按「访问地区限制」策略拦截")
+		common.BlockLog.Log("province:"+ip, "IP地址["+ip+"]未归属任何中国省份，已按「访问地区限制」策略拦截")
 		return true
 	}
 	if limit.Allowed[province] {
 		return false
 	}
-	blockLogLimiter.Log("province:"+ip,
+	common.BlockLog.Log("province:"+ip,
 		"IP地址["+ip+"]所属省份["+province+"]不在允许访问的省份列表内，已按「访问地区限制」策略拦截")
 	return true
 }

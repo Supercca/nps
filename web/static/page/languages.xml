@@ -1397,6 +1397,14 @@
 		<zh-CN>内置 IP 库仅覆盖 IPv4，IPv6 地址不受省份规则限制</zh-CN>
 		<en-US>The built-in IP database only covers IPv4, so IPv6 addresses are not restricted by the province rules</en-US>
 	</lang>
+	<lang id="word-loginfailalertthreshold">
+		<zh-CN>登录失败告警阈值</zh-CN>
+		<en-US>Login failure alert threshold</en-US>
+	</lang>
+	<lang id="info-loginfailalertthresholdtips">
+		<zh-CN>同一来源 IP 在 60 秒内登录面板失败达到该次数时，推送一条告警通知；填 0 表示不告警</zh-CN>
+		<en-US>When the same source IP fails to log in to the panel 60 seconds in a row up to this count, an alert notification is pushed; 0 disables the alert</en-US>
+	</lang>
 	<lang id="word-provincedb">
 		<zh-CN>IP 库</zh-CN>
 		<en-US>IP database</en-US>

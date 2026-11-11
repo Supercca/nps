@@ -52,6 +52,7 @@ func (s *GlobalController) Index() {
 	s.Data["blockForeignIp"] = settings.BlockForeignIp
 	s.Data["autoBlockForeignIp"] = settings.AutoBlockForeignIp
 	s.Data["regionLimitMode"] = settings.RegionLimitMode
+	s.Data["loginFailAlertThreshold"] = settings.LoginFailAlertThreshold
 	s.Data["provinceGroups"] = provinceOptionsWithState(settings.AllowedProvinces)
 	provinceDb := geo.ProvinceDBStatus()
 	if provinceDb.Path == "" {
@@ -115,6 +116,7 @@ func (s *GlobalController) Save() {
 	global.RegionLimitMode = globalIntPtr(regionLimitMode)
 	global.BlockForeignIp = globalBoolPtr(regionLimitMode == file.RegionLimitModeBlockForeign)
 	global.AllowedProvinces = filterProvinces(s.provincesParam())
+	global.LoginFailAlertThreshold = globalIntPtr(filterLoginFailThreshold(s.GetIntNoErr("loginFailAlertThreshold")))
 	global.AutoBlockForeignIp = globalBoolPtr(s.GetBoolNoErr("autoBlockForeignIp"))
 	global.BarkEnabled = globalBoolPtr(s.GetBoolNoErr("barkEnabled"))
 	global.BarkUrl = globalStringPtr(strings.TrimSpace(s.getEscapeString("barkUrl")))
@@ -406,6 +408,18 @@ func provinceOptionsWithState(selected []string) []provinceGroupOption {
 		result = append(result, item)
 	}
 	return result
+}
+
+// filterLoginFailThreshold 规整登录失败告警阈值：
+// 负数按 0（不告警）处理，超过上限按上限截断。
+func filterLoginFailThreshold(value int) int {
+	if value < 0 {
+		return 0
+	}
+	if value > file.MaxLoginFailAlertThreshold {
+		return file.MaxLoginFailAlertThreshold
+	}
+	return value
 }
 
 // filterProvinces 只保留合法且去重后的省份名，避免写入任意值。
