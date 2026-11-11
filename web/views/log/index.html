@@ -129,7 +129,7 @@
         $.ajax({
             type: 'GET',
             url: '{{.web_base_url}}/log/list',
-            data: { lines: 1000 },
+            data: { lines: 500 },
             dataType: 'json',
             success: function (res) {
                 if (!res || res.status !== 1) return;
